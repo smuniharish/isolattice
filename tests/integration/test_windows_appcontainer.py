@@ -131,11 +131,14 @@ def _tool(name: str) -> str:
 
 
 def sddl(path: Path) -> str:
+    # pwsh's PSModulePath would make Windows PowerShell load incompatible modules.
+    environment = {key: value for key, value in os.environ.items() if key.upper() != "PSMODULEPATH"}
     return subprocess.run(
         [_tool("powershell"), "-NoProfile", "-Command", f"(Get-Acl -LiteralPath '{path}').Sddl"],
         capture_output=True,
         text=True,
         check=True,
+        env=environment,
     ).stdout.strip()
 
 

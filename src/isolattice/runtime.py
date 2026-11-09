@@ -303,6 +303,7 @@ class ExecutionHandle:
         self._instance._unobserved.pop(self, None)
 
     async def _release_staging(self) -> None:
+        # Concurrent cancel and close both remove the tree; removal tolerates that.
         if self._staging is not None:
             await _artifacts.unstage(self._staging)
             self._staging = None

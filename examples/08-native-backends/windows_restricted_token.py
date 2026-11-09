@@ -35,7 +35,18 @@ advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 kernel32.GetCurrentProcess.restype = wintypes.HANDLE
 kernel32.OpenProcess.restype = wintypes.HANDLE
+kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+advapi32.OpenProcessToken.argtypes = (
+    wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)
+)
+advapi32.GetTokenInformation.argtypes = (
+    wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD,
+    ctypes.POINTER(wintypes.DWORD),
+)
+advapi32.GetSidSubAuthorityCount.argtypes = (ctypes.c_void_p,)
 advapi32.GetSidSubAuthorityCount.restype = ctypes.POINTER(ctypes.c_ubyte)
+advapi32.GetSidSubAuthority.argtypes = (ctypes.c_void_p, wintypes.DWORD)
 advapi32.GetSidSubAuthority.restype = ctypes.POINTER(wintypes.DWORD)
 token = wintypes.HANDLE()
 advapi32.OpenProcessToken(kernel32.GetCurrentProcess(), 0x0008, ctypes.byref(token))

@@ -115,8 +115,9 @@ jobs:
           uv pip install --python "$RUNNER_TEMP/wheel" dist/*.whl
           "$RUNNER_TEMP/wheel/bin/python" -c "import importlib.util; import isolattice; assert importlib.util.find_spec('aiobotocore') is None; assert isolattice.Sandbox"
           "$RUNNER_TEMP/wheel/bin/python" isolattice-skills/skills/isolattice/scripts/verify_setup.py
-          "$RUNNER_TEMP/wheel/bin/python" isolattice-skills/skills/isolattice-extend/scripts/check_store.py \
-            store_template:SQLiteArtifactStore --path isolattice-skills/skills/isolattice-extend/assets
+          ISOLATTICE_SQLITE_DATABASE="$RUNNER_TEMP/check-store.sqlite3" \
+            "$RUNNER_TEMP/wheel/bin/python" isolattice-skills/skills/isolattice-extend/scripts/check_store.py \
+            store_template:from_environment --path isolattice-skills/skills/isolattice-extend/assets
       - name: Install the S3 extra and run the setup check
         run: |
           uv pip install --python "$RUNNER_TEMP/wheel" "dist/isolattice-$(uv version --short)-py3-none-any.whl[s3]"
@@ -210,15 +211,16 @@ jobs:
           - os: FreeBSD
             action: freebsd
             python: python3.12
-            packages: pkg install -y python312 py312-sqlite3 py312-pip
+            packages: pkg install -y python312 py312-sqlite3 py312-pip py312-aiohttp py312-wrapt
           - os: OpenBSD
             action: openbsd
             python: python3
-            packages: pkg_add -I python%3 py3-pip
+            packages: pkg_add -I python%3 py3-pip py3-aiohttp py3-wrapt
           - os: NetBSD
             action: netbsd
             python: python3.12
-            packages: /usr/sbin/pkg_add pkgin && pkgin -y install python312 py312-sqlite3 py312-pip
+            # pkgsrc builds the sqlite3 module into python312.
+            packages: /usr/sbin/pkg_add pkgin && pkgin -y install python312 py312-pip py312-aiohttp py312-wrapt
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -227,14 +229,16 @@ jobs:
         env:
           PYTHON: ${{ matrix.python }}
           PACKAGES: ${{ matrix.packages }}
-        # Wheels are pure Python or built locally; uv publishes no BSD binaries.
+        # uv and uv_build publish no BSD binaries, so the suite runs from the source tree
+        # (pytest adds src to the path) with native wheels taken from the OS packages.
         run: |
           cat > "$GITHUB_WORKSPACE/.bsd-test.sh" <<EOF
           set -eux
           $PACKAGES
           $PYTHON -m venv --system-site-packages --without-pip /tmp/venv
           /tmp/venv/bin/python -m pip install --upgrade pip
-          /tmp/venv/bin/python -m pip install --group test '.[s3]'
+          /tmp/venv/bin/python -c 'import sqlite3, tomllib; print("\n".join(tomllib.load(open("pyproject.toml", "rb"))["project"]["optional-dependencies"]["s3"]))' > /tmp/s3.txt
+          /tmp/venv/bin/python -m pip install --group test -r /tmp/s3.txt
           HYPOTHESIS_PROFILE=ci /tmp/venv/bin/python -m pytest -p no:cacheprovider
           EOF
       - if: matrix.action == 'freebsd'
@@ -287,10 +291,14 @@ jobs:
         run: |
           uv sync --locked --all-extras --all-groups
           sudo apt-get update
-          sudo apt-get install --yes podman runc software-properties-common
-          # Ubuntu 24.04 ships no CRIU package; use the CRIU project's PPA.
-          sudo add-apt-repository --yes ppa:criu/ppa
+          sudo apt-get install --yes podman runc
+          # Use the distribution's CRIU when it ships one; otherwise the CRIU project's PPA.
+          if [ -z "$(apt-cache policy criu | sed -n 's/^ *Candidate: //p' | grep -v '(none)')" ]; then
+            sudo apt-get install --yes software-properties-common
+            sudo add-apt-repository --yes ppa:criu/ppa
+          fi
           sudo apt-get install --yes criu
+          sudo criu check || sudo criu check --all || true
       - name: Provision explicit test engines and an S3 store, then run every live case
         shell: bash
         run: |
@@ -306,6 +314,9 @@ jobs:
               for log in "$RUNNER_TEMP/isolattice-rootless.log" "$RUNNER_TEMP/isolattice-resources.log"; do
                 if [ -f "$log" ]; then cat "$log"; fi
               done
+              # CRIU writes its own log next to each disposable test container.
+              sudo find /var/lib/containers /run/containers /run/runc -name 'dump.log' \
+                -exec sh -c 'echo "== $1"; tail -n 40 "$1"' sh {} \; 2>/dev/null || true
             fi
             podman rm --force isolattice-s3-test >/dev/null 2>&1 || true
             if [ -f "$resource_pidfile" ]; then
@@ -452,8 +463,9 @@ jobs:
           }
           trap cleanup EXIT
           "$kind" create cluster --name isolattice --kubeconfig "$ISOLATTICE_TEST_KUBERNETES_KUBECONFIG" --wait 120s
-          docker pull "$ISOLATTICE_TEST_KUBERNETES_IMAGE"
-          "$kind" load docker-image "$ISOLATTICE_TEST_KUBERNETES_IMAGE" --name isolattice
+          # The node pulls the image itself; `kind load` cannot import multi-platform
+          # images exported by Docker's containerd image store.
+          docker exec isolattice-control-plane crictl pull "$ISOLATTICE_TEST_KUBERNETES_IMAGE"
           kubectl --kubeconfig "$ISOLATTICE_TEST_KUBERNETES_KUBECONFIG" --context "$ISOLATTICE_TEST_KUBERNETES_CONTEXT" \
             create namespace "$ISOLATTICE_TEST_KUBERNETES_NAMESPACE"
           report="$RUNNER_TEMP/isolattice-kubernetes.xml"
@@ -549,6 +561,13 @@ jobs:
           # ALL APPLICATION PACKAGES and ALL RESTRICTED APPLICATION PACKAGES, as under Program Files.
           icacls $base /grant "*S-1-15-2-1:(OI)(CI)RX" "*S-1-15-2-2:(OI)(CI)RX" /Q
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # getpath resolves the real interpreter path, which needs each ancestor readable.
+          $parent = Split-Path $base -Parent
+          while ($parent -and (Split-Path $parent -Parent)) {
+            icacls $parent /grant "*S-1-15-2-1:RX" "*S-1-15-2-2:RX" /Q
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $parent = Split-Path $parent -Parent
+          }
       - name: Run every Job Object, restricted-token and AppContainer case
         shell: pwsh
         run: |

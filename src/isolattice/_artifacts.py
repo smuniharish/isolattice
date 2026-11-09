@@ -29,10 +29,14 @@ async def stage(parent: Path | None) -> Path:
     return Path(await asyncio.to_thread(tempfile.mkdtemp, prefix="isolattice-", dir=parent))
 
 
+def _ignore_missing(_function: object, _path: str, error: BaseException) -> None:
+    # A concurrent or cancelled earlier removal already deleted this entry.
+    if not isinstance(error, FileNotFoundError):
+        raise error
+
+
 def _rmtree_if_present(directory: Path) -> None:
-    # A cancelled earlier attempt may have finished in its worker thread.
-    if directory.exists():
-        shutil.rmtree(directory)
+    shutil.rmtree(directory, onexc=_ignore_missing)
 
 
 def _remove_tree(directory: Path) -> None:

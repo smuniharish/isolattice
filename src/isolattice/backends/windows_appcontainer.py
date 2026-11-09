@@ -47,7 +47,7 @@ from ..models import (
 from ..termination import terminate_boundary
 from .windows import (
     _NO_GRACEFUL_STOP,
-    _base_interpreter,
+    _helper_path,
     _JobDriver,
     _JobHandle,
     _JobLimits,
@@ -606,10 +606,7 @@ class WindowsAppContainerBackend(Backend):
             raise ValueError("startup_timeout must be finite and positive")
         self._less_privileged = less_privileged
         self._startup_timeout = float(startup_timeout)
-        self._helper_interpreter = _windows_path(
-            _base_interpreter() if helper_interpreter is None else helper_interpreter,
-            "helper_interpreter",
-        )
+        self._helper_interpreter = _helper_path(helper_interpreter)
 
     def _session(self, limits: _JobLimits) -> _AppContainerSession:
         return _AppContainerSession(

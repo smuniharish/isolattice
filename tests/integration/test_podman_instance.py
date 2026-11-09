@@ -331,12 +331,14 @@ def test_restore_rejects_foreign_archive(
         timeout=120,
     )
     try:
-        subprocess.run(
+        checkpointed = subprocess.run(
             [*command, "container", "checkpoint", "--export", str(archive), name],
-            check=True,
+            check=False,
             capture_output=True,
             timeout=120,
         )
+        # The disposable foreign container holds no workload data, so show the engine error.
+        assert checkpointed.returncode == 0, checkpointed.stderr.decode(errors="replace")
     finally:
         subprocess.run(
             [*command, "rm", "-f", "-t", "0", name], check=True, capture_output=True, timeout=60

@@ -40,7 +40,32 @@ if TYPE_CHECKING:
 
 _MINIMUM_BUILD = 9200  # Windows 8 / Server 2012: nested Job Objects.
 _TERMINATED_EXIT_CODE = 1
-_LOW_INTEGRITY_LABEL = b"S-1-16-4096"
+_LOW_INTEGRITY_RID = b"4096"
+# Reads the probe's own token integrity RID; ``whoami /groups`` fails at low integrity.
+_INTEGRITY_PROBE = """import ctypes
+from ctypes import wintypes as w
+k = ctypes.WinDLL('kernel32', use_last_error=True)
+a = ctypes.WinDLL('advapi32', use_last_error=True)
+k.GetCurrentProcess.restype = w.HANDLE
+a.OpenProcessToken.argtypes = (w.HANDLE, w.DWORD, ctypes.POINTER(w.HANDLE))
+a.GetTokenInformation.argtypes = (
+    w.HANDLE, ctypes.c_int, ctypes.c_void_p, w.DWORD, ctypes.POINTER(w.DWORD)
+)
+a.GetSidSubAuthorityCount.restype = ctypes.POINTER(ctypes.c_ubyte)
+a.GetSidSubAuthorityCount.argtypes = (ctypes.c_void_p,)
+a.GetSidSubAuthority.restype = ctypes.POINTER(w.DWORD)
+a.GetSidSubAuthority.argtypes = (ctypes.c_void_p, w.DWORD)
+token = w.HANDLE()
+buffer = ctypes.create_string_buffer(64)
+size = w.DWORD()
+if not (
+    a.OpenProcessToken(k.GetCurrentProcess(), 8, ctypes.byref(token))
+    and a.GetTokenInformation(token, 25, buffer, 64, ctypes.byref(size))
+):
+    raise SystemExit(1)
+sid = ctypes.c_void_p.from_buffer(buffer).value
+print(a.GetSidSubAuthority(sid, a.GetSidSubAuthorityCount(sid)[0] - 1)[0])
+"""
 _NO_GRACEFUL_STOP = (
     "Windows Job Objects provide no graceful stop; the job's process tree was terminated"
 )
@@ -434,6 +459,14 @@ def _base_interpreter() -> Path:
     return Path(sys.base_prefix) / Path(sys.executable).name
 
 
+def _helper_path(value: str | os.PathLike[str] | None) -> Path:
+    """Validate the helper interpreter; off Windows discovery fails before it is used."""
+    if value is None:
+        default = _base_interpreter()
+        return _windows_path(default, "helper_interpreter") if sys.platform == "win32" else default
+    return _windows_path(value, "helper_interpreter")
+
+
 def _supported_host() -> str | None:
     if sys.platform == "win32":
         if sys.getwindowsversion().build < _MINIMUM_BUILD:
@@ -583,10 +616,7 @@ class WindowsJobBackend(Backend):
         self._root = root
         self._restricted_token = restricted_token
         self._startup_timeout = float(startup_timeout)
-        self._helper_interpreter = _windows_path(
-            _base_interpreter() if helper_interpreter is None else helper_interpreter,
-            "helper_interpreter",
-        )
+        self._helper_interpreter = _helper_path(helper_interpreter)
 
     @override
     async def discover(self) -> BackendReport:
@@ -603,17 +633,16 @@ class WindowsJobBackend(Backend):
         return _report(True, restricted_token=restricted)
 
     async def _probe_restricted_token(self) -> None:
-        """Launch ``whoami /groups`` as a real workload and require a low integrity label."""
+        """Launch a real workload that must observe its own low integrity level."""
         from .windows_appcontainer import _launch
 
-        system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
         job = _new_job(_JobLimits(64 * 1024 * 1024, None, 1))
         try:
             process = await _launch(
                 self._helper_interpreter,
                 {
                     "mode": "restricted",
-                    "argv": [str(Path(system_root, "System32", "whoami.exe")), "/groups"],
+                    "argv": [str(self._helper_interpreter), "-I", "-S", "-c", _INTEGRITY_PROBE],
                     "cwd": str(self._root),
                     "environment": _environment({}),
                 },
@@ -626,7 +655,7 @@ class WindowsJobBackend(Backend):
                     output, _ = await process.communicate()
             finally:
                 await _discard(process)
-            if process.returncode != 0 or _LOW_INTEGRITY_LABEL not in output:
+            if process.returncode != 0 or output.strip() != _LOW_INTEGRITY_RID:
                 raise SandboxCapabilityError(
                     "the restricted-token probe did not run at low integrity"
                 )

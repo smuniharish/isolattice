@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import os
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -132,13 +133,33 @@ def _flaky_rmtree(failures: int) -> tuple[list[int], Any]:
     calls = [0]
     real = _artifacts.shutil.rmtree
 
-    def rmtree(path: Path) -> None:
+    def rmtree(path: Path, **options: Any) -> None:
         calls[0] += 1
         if calls[0] <= failures:
             raise PermissionError("delete pending")
-        real(path)
+        real(path, **options)
 
     return calls, rmtree
+
+
+def test_concurrent_staging_removals_all_succeed(tmp_path: Path) -> None:
+    async def check() -> None:
+        for _ in range(20):
+            directory = await _artifacts.stage(tmp_path)
+            for index in range(50):
+                nested = directory / f"d{index}"
+                nested.mkdir()
+                (nested / "memory.img").write_bytes(b"workload memory")
+            await asyncio.gather(*(_artifacts.unstage(directory) for _ in range(4)))
+            assert not directory.exists()
+
+    asyncio.run(check())
+
+
+def test_removal_ignores_only_missing_entries() -> None:
+    _artifacts._ignore_missing(os.rmdir, "gone", FileNotFoundError("gone"))
+    with pytest.raises(PermissionError, match="denied"):
+        _artifacts._ignore_missing(os.rmdir, "held", PermissionError("denied"))
 
 
 def test_windows_staging_removal_retries_delete_pending_files(
