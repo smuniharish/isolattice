@@ -788,6 +788,7 @@ def _states(*states: dict[str, object]) -> list[dict[str, object]]:
 
 
 _RUNNING: dict[str, object] = {"Status": "running", "Running": True, "Pid": 42}
+_STOPPED: dict[str, object] = {"Status": "stopped", "Running": False, "Pid": 42}
 _EXITED: dict[str, object] = {"Status": "exited", "Running": False, "Pid": 0, "ExitCode": 3}
 
 
@@ -797,7 +798,7 @@ def test_exit_code_waits_a_bounded_time_for_the_recorded_exit(
 ) -> None:
     async def check() -> None:
         session = podman._PodmanSession(engine())
-        observed = _states(_RUNNING, _RUNNING, _EXITED) if settles else []
+        observed = _states(_RUNNING, _STOPPED, _EXITED) if settles else []
 
         async def exists(_: object) -> bool:
             return True

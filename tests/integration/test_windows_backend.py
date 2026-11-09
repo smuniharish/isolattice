@@ -471,6 +471,8 @@ def test_windows_examples(directory: str, filename: str, expected: tuple[str, ..
         pytest.skip(completed.stderr.decode().strip())
     if b"User Account Control may be disabled" in completed.stderr:
         pytest.skip(completed.stderr.decode().strip())
+    if b"could not initialize a low-integrity process" in completed.stderr:
+        pytest.skip(completed.stderr.decode().strip())
     assert completed.returncode == 0, completed
     assert completed.stderr == b"", completed.stderr
     for text in expected:

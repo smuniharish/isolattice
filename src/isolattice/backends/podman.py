@@ -1350,15 +1350,20 @@ class _PodmanSession(BackendSession):
     async def exit_code(self, boundary: Boundary, client_exit_code: int) -> int:
         driver = _PodmanDriver(self._engine, self, boundary)
         observation = await driver.observe()
-        # The engine can record the exit slightly after attach returns.
+        # The engine can record the exit slightly after attach returns, passing through
+        # transient states such as "stopped" or a cleared Running flag with a live Pid.
         loop = asyncio.get_running_loop()
         deadline = loop.time() + _EXIT_SETTLE_SECONDS
-        while observation.state is BoundaryState.RUNNING and loop.time() < deadline:
+        while (
+            observation.state in (BoundaryState.RUNNING, BoundaryState.UNKNOWN)
+            and loop.time() < deadline
+        ):
             await asyncio.sleep(_EXIT_SETTLE_INTERVAL)
             observation = await driver.observe()
         if observation.state is not BoundaryState.EXITED or observation.exit_code is None:
             raise SandboxExecutionError(
-                "Podman attach ended without an exited container"
+                f"Podman attach ended without an exited container (observed "
+                f"{observation.detail or observation.state.value})"
                 "; if the workload never started, check that argv[0] is an absolute path: "
                 "the container environment holds only ExecutionRequest.environment"
             )
@@ -1690,7 +1695,8 @@ class _PodmanDriver(TerminationDriver):
             if type(code) is int:
                 return Observation(BoundaryState.EXITED, code)
         return Observation(
-            BoundaryState.UNKNOWN, detail="Podman returned an uncertain container state"
+            BoundaryState.UNKNOWN,
+            detail=f"Podman returned an uncertain container state ({str(status)[:40]})",
         )
 
     @override

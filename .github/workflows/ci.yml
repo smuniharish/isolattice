@@ -231,7 +231,8 @@ jobs:
             python: python3
             packages: pkg_add -I python%3 py3-pip py3-aiohttp py3-wrapt py3-hypothesis
             # OpenBSD's Python links LibreSSL, which urllib3 2 warns about on import.
-            pytest-args: -W ignore::urllib3.exceptions.NotOpenSSLWarning
+            # A message filter: a category filter imports urllib3, which itself warns.
+            warning-filter: "ignore:urllib3 v2 only supports OpenSSL"
           - os: NetBSD
             action: netbsd
             python: python3.12
@@ -249,7 +250,7 @@ jobs:
         env:
           PYTHON: ${{ matrix.python }}
           PACKAGES: ${{ matrix.packages }}
-          PYTEST_ARGS: ${{ matrix.pytest-args }}
+          WARNING_FILTER: ${{ matrix.warning-filter }}
         # uv and uv_build publish no BSD binaries, so the suite runs from the source tree
         # (pytest adds src to the path) with native wheels taken from the OS packages.
         # Hypothesis publishes no BSD wheels and its sdist needs Rust, so it comes from
@@ -264,7 +265,8 @@ jobs:
           /tmp/venv/bin/python -m pip install -r /tmp/requirements.txt
           /tmp/venv/bin/python -m pip install --no-deps .bsd-dist/*.whl
           /tmp/venv/bin/python -c 'import hypothesis; print("hypothesis", hypothesis.__version__)'
-          HYPOTHESIS_PROFILE=ci /tmp/venv/bin/python -m pytest -p no:cacheprovider $PYTEST_ARGS
+          WARNING_FILTER='$WARNING_FILTER'
+          HYPOTHESIS_PROFILE=ci /tmp/venv/bin/python -m pytest -p no:cacheprovider \${WARNING_FILTER:+-W "\$WARNING_FILTER"}
           EOF
       - if: matrix.action == 'freebsd'
         uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1.5.9
@@ -598,11 +600,13 @@ jobs:
         shell: pwsh
         run: |
           $report = Join-Path $env:RUNNER_TEMP "isolattice-windows-job.xml"
-          uv run --no-sync pytest tests/integration/test_windows_backend.py $env:COVERAGE_ARGS.Split(" ") --junitxml=$report
+          # The AppContainer example runs after the interpreter grant below.
+          uv run --no-sync pytest tests/integration/test_windows_backend.py -k "not windows_appcontainer" $env:COVERAGE_ARGS.Split(" ") --junitxml=$report
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # When a host lets low-integrity code open the runner's processes (User Account
           # Control disabled), the restricted option correctly reports itself unavailable.
-          uv run --no-sync python scripts/check_live_skips.py $report --allow-reason "User Account Control may be disabled"
+          # A session that cannot initialize low-integrity processes fails closed the same way.
+          uv run --no-sync python scripts/check_live_skips.py $report --allow-reason "User Account Control may be disabled" --allow-reason "could not initialize a low-integrity process"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Let AppContainers read the base interpreter
         shell: pwsh
@@ -622,7 +626,7 @@ jobs:
         shell: pwsh
         run: |
           $report = Join-Path $env:RUNNER_TEMP "isolattice-windows-appcontainer.xml"
-          uv run --no-sync pytest tests/integration/test_windows_appcontainer.py $env:COVERAGE_ARGS.Split(" ") --cov-append --junitxml=$report
+          uv run --no-sync pytest tests/integration/test_windows_appcontainer.py tests/integration/test_windows_backend.py -k "appcontainer" $env:COVERAGE_ARGS.Split(" ") --cov-append --junitxml=$report
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           uv run --no-sync python scripts/check_live_skips.py $report
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

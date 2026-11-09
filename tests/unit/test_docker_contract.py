@@ -16,6 +16,7 @@ from isolattice import (
     ExecutionRequest,
     ResourceBudget,
     SandboxCapabilityError,
+    SandboxExecutionError,
     SandboxPolicy,
 )
 from isolattice.backend import Boundary
@@ -322,3 +323,35 @@ def test_docker_engine_does_not_get_the_podman_environment_allowance(
     monkeypatch.setattr(docker._DockerSession, "_inspect", inspect)
     with pytest.raises(SandboxCapabilityError, match="environment"):
         asyncio.run(session._validate(boundary, request))
+
+
+@pytest.mark.parametrize("settles", [True, False])
+def test_exit_code_waits_a_bounded_time_for_the_recorded_exit(
+    settles: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    running = {"Status": "running", "Running": True, "Pid": 42}
+    exited = {"Status": "exited", "Running": False, "Pid": 0, "ExitCode": 3}
+    observed = [running, {"Status": "exited", "Running": False, "Pid": 42}, exited]
+
+    async def check() -> None:
+        session = docker._DockerSession(engine(), docker._Limits(), scratch_bytes=None)
+        boundary = Boundary("d" * 64, "owned", SANDBOX, EXECUTION)
+        states = list(observed) if settles else []
+
+        async def exists(_: object) -> bool:
+            return True
+
+        async def inspect(_: Boundary) -> dict[str, object]:
+            return {"State": states.pop(0) if states else running}
+
+        monkeypatch.setattr(docker._DockerDriver, "exists", exists)
+        monkeypatch.setattr(session, "_inspect", inspect)
+        monkeypatch.setattr(docker, "_EXIT_SETTLE_SECONDS", 0.2)
+        monkeypatch.setattr(docker, "_EXIT_SETTLE_INTERVAL", 0.01)
+        if settles:
+            assert await session.exit_code(boundary, 3) == 3
+        else:
+            with pytest.raises(SandboxExecutionError, match="observed running"):
+                await session.exit_code(boundary, 3)
+
+    asyncio.run(check())

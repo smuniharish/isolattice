@@ -48,6 +48,8 @@ _USER = 65534
 _NO_NEW_PRIVILEGES = frozenset({"no-new-privileges", "no-new-privileges:true"})
 # Podman's Docker-compatible API injects this marker into every container environment.
 _PODMAN_MARKER = "container=podman"
+_EXIT_SETTLE_SECONDS = 5.0
+_EXIT_SETTLE_INTERVAL = 0.05
 
 
 _DEFAULT_RUNNER = SubprocessRunner()
@@ -733,9 +735,22 @@ class _DockerSession(BackendSession):
 
     @override
     async def exit_code(self, boundary: Boundary, client_exit_code: int) -> int:
-        observation = await _DockerDriver(self._engine, self, boundary).observe()
+        driver = _DockerDriver(self._engine, self, boundary)
+        observation = await driver.observe()
+        # The engine can record the exit slightly after attach returns.
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _EXIT_SETTLE_SECONDS
+        while (
+            observation.state in (BoundaryState.RUNNING, BoundaryState.UNKNOWN)
+            and loop.time() < deadline
+        ):
+            await asyncio.sleep(_EXIT_SETTLE_INTERVAL)
+            observation = await driver.observe()
         if observation.state is not BoundaryState.EXITED or observation.exit_code is None:
-            raise SandboxExecutionError("Docker attach ended without an exited container")
+            raise SandboxExecutionError(
+                f"Docker attach ended without an exited container (observed "
+                f"{observation.detail or observation.state.value})"
+            )
         if client_exit_code != observation.exit_code:
             raise SandboxExecutionError(
                 "Docker attach exited with a status different from the container"
@@ -780,7 +795,8 @@ class _DockerDriver(TerminationDriver):
             if type(code) is int:
                 return Observation(BoundaryState.EXITED, code)
         return Observation(
-            BoundaryState.UNKNOWN, detail="Docker returned an uncertain container state"
+            BoundaryState.UNKNOWN,
+            detail=f"Docker returned an uncertain container state ({str(status)[:40]})",
         )
 
     @override

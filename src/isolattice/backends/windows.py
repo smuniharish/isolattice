@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 _MINIMUM_BUILD = 9200  # Windows 8 / Server 2012: nested Job Objects.
 _TERMINATED_EXIT_CODE = 1
 _LOW_INTEGRITY_PROBE_OUTPUT = b"4096 denied"
+_STATUS_DLL_INIT_FAILED = 0xC0000142
 # Prints the probe's own integrity RID and whether it can open the caller (argv[1]) for
 # termination; ``whoami /groups`` fails at low integrity.
 _INTEGRITY_PROBE = """import ctypes, sys
@@ -671,6 +672,11 @@ class WindowsJobBackend(Backend):
             finally:
                 await _discard(process)
             observed = output.strip()
+            if process.returncode == _STATUS_DLL_INIT_FAILED and not observed:
+                raise SandboxCapabilityError(
+                    "Windows could not initialize a low-integrity process in this session "
+                    "(STATUS_DLL_INIT_FAILED), so the restricted token is unavailable on this host"
+                )
             if process.returncode != 0 or not observed.startswith(b"4096 "):
                 detail = (errors.strip().splitlines() or [b""])[-1][:200].decode(errors="replace")
                 raise SandboxCapabilityError(

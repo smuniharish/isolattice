@@ -197,7 +197,11 @@ write medium-integrity files or registry keys or open the user's processes for w
 access. It can still read everything the user can, write low-integrity locations, use
 the network and ask system services to act for it. Discovery launches a probe and
 reports the backend unavailable if the probe does not run at low integrity or can
-open the calling process for termination.
+open the calling process for termination. Hosts where User Account Control is
+disabled fail the second check. Sessions where Windows cannot initialize a
+low-integrity process (`STATUS_DLL_INIT_FAILED`), seen on some GitHub-hosted runners,
+fail the first. In both cases the option is unavailable, and workloads never start
+under a weaker token.
 
 ### Job Object capabilities
 
