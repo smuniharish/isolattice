@@ -53,6 +53,8 @@ _WORKSPACE = "/workspace"
 _LOG_MAX_SIZE = "16mb"
 _LOG_FILTER = Path(__file__).with_name("_podman_log_filter.py")
 _MAX_SPEC_BYTES = 4 * 1024 * 1024
+_EXIT_SETTLE_SECONDS = 5.0
+_EXIT_SETTLE_INTERVAL = 0.05
 _MAX_LOG_BYTES = 64 * 1024 * 1024
 _REQUIRED_NAMESPACES = frozenset({"pid", "network", "ipc", "uts", "mount", "cgroup"})
 _RESTORED_MOUNTS = frozenset(
@@ -1346,7 +1348,14 @@ class _PodmanSession(BackendSession):
 
     @override
     async def exit_code(self, boundary: Boundary, client_exit_code: int) -> int:
-        observation = await _PodmanDriver(self._engine, self, boundary).observe()
+        driver = _PodmanDriver(self._engine, self, boundary)
+        observation = await driver.observe()
+        # The engine can record the exit slightly after attach returns.
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _EXIT_SETTLE_SECONDS
+        while observation.state is BoundaryState.RUNNING and loop.time() < deadline:
+            await asyncio.sleep(_EXIT_SETTLE_INTERVAL)
+            observation = await driver.observe()
         if observation.state is not BoundaryState.EXITED or observation.exit_code is None:
             raise SandboxExecutionError(
                 "Podman attach ended without an exited container"

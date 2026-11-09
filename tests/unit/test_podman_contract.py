@@ -781,3 +781,38 @@ def test_control_spawn_and_io_share_one_deadline(monkeypatch: pytest.MonkeyPatch
             await podman._invoke(replace(engine(), command_timeout=0.3), "control operation")
 
     asyncio.run(check())
+
+
+def _states(*states: dict[str, object]) -> list[dict[str, object]]:
+    return [{"State": state} for state in states]
+
+
+_RUNNING: dict[str, object] = {"Status": "running", "Running": True, "Pid": 42}
+_EXITED: dict[str, object] = {"Status": "exited", "Running": False, "Pid": 0, "ExitCode": 3}
+
+
+@pytest.mark.parametrize("settles", [True, False])
+def test_exit_code_waits_a_bounded_time_for_the_recorded_exit(
+    settles: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def check() -> None:
+        session = podman._PodmanSession(engine())
+        observed = _states(_RUNNING, _RUNNING, _EXITED) if settles else []
+
+        async def exists(_: object) -> bool:
+            return True
+
+        async def inspect(_: Boundary) -> dict[str, object]:
+            return observed.pop(0) if observed else {"State": _RUNNING}
+
+        monkeypatch.setattr(podman._PodmanDriver, "exists", exists)
+        monkeypatch.setattr(session, "_inspect", inspect)
+        monkeypatch.setattr(podman, "_EXIT_SETTLE_SECONDS", 0.2)
+        monkeypatch.setattr(podman, "_EXIT_SETTLE_INTERVAL", 0.01)
+        if settles:
+            assert await session.exit_code(boundary(), 3) == 3
+        else:
+            with pytest.raises(SandboxExecutionError, match="without an exited container"):
+                await session.exit_code(boundary(), 3)
+
+    asyncio.run(check())
