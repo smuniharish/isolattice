@@ -1,0 +1,5 @@
+flowchart LR
+    Untrusted["Workload, archives,<br/>engine responses"] --> Boundary["Backend enforcement"]
+    Boundary --> TCB["Trusted base<br/>kernel, engine, cluster"]
+    Coordinator["Isolattice runtime<br/>trusted"] --> Boundary
+    Coordinator --> Evidence["Reports and<br/>redacted events"]

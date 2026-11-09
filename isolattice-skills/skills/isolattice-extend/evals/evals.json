@@ -1,0 +1,57 @@
+{
+  "skill_name": "isolattice-extend",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "audit.py writes compliance entries by hand after each isolattice run and misses failed and cancelled runs. Turn it into something isolattice calls itself for every lifecycle event, without slowing the event loop, and flag cleanup problems for the on-call engineer.",
+      "expected_output": "An EventSink subclass whose emit only appends a flat record to a bounded in-memory buffer and counts drops, an async task that writes batches to audit.jsonl off the event loop, Sandbox(event_sink=...) wiring, special handling of termination.unknown and sandbox.cleanup-failed, and tests.",
+      "files": ["files/audit_log/audit.py"],
+      "assertions": [
+        "A class subclasses isolattice.EventSink and implements emit",
+        "emit performs no file I/O; it appends to a bounded buffer or queue and counts or drops overflow",
+        "Records are written by an async task or asyncio.to_thread, not inside emit",
+        "The sink is passed as Sandbox(event_sink=...)",
+        "termination.unknown or sandbox.cleanup-failed (event.is_warning) triggers an alert or distinct handling",
+        "No argv, environment, stdin or output is added to the audit records"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Store isolattice snapshots and checkpoints in our PostgreSQL database instead of the local filesystem, and prove the store is correct.",
+      "expected_output": "An ArtifactStore subclass that inserts the archive and manifest in one transaction, refuses an existing key through a unique constraint, enforces max_bytes before copying, creates the destination exclusively, raises SandboxArtifactError for every failure, runs blocking calls off the event loop or uses an async driver, and is verified with isolattice.testing.check_artifact_store and scripts/check_store.py.",
+      "files": [],
+      "assertions": [
+        "A class subclasses isolattice.ArtifactStore and implements publish, fetch, exists and delete",
+        "publish refuses an existing key and stores archive and manifest atomically",
+        "fetch enforces max_bytes and opens the destination exclusively",
+        "Failures are raised as SandboxArtifactError",
+        "The store is verified with check_artifact_store or scripts/check_store.py",
+        "The store is passed as Sandbox(artifact_store=...)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our platform team wants every podman call isolattice makes to run with a lower CPU priority and to strip --read-only because it breaks one of our images. Write the runner.",
+      "expected_output": "A CommandRunner subclass that may lower priority (for example by wrapping the start or setting process attributes) but refuses to remove --read-only: changing engine flags weakens the policy. Instead it recommends read_only_root=False in the SandboxPolicy when the user accepts that trade-off.",
+      "files": [],
+      "assertions": [
+        "A class subclasses isolattice.CommandRunner and implements spawn",
+        "argv is passed to the inner runner unchanged; --read-only is not stripped",
+        "Explains that engine flags enforce the policy and points to read_only_root=False in SandboxPolicy instead",
+        "Full argv is not logged"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "We are building a wrapper package on top of isolattice for our data team. They must be able to bring their own artifact store and event sink and choose the backend. How should our API look?",
+      "expected_output": "A factory or class that accepts backend, artifact_store, event_sink and, for engine backends, runner as typed parameters, passes them unchanged to Sandbox and the backend, and defaults only when the caller passes nothing.",
+      "files": [],
+      "assertions": [
+        "The wrapper accepts backend, artifact_store and event_sink parameters typed with the isolattice ABCs",
+        "The parameters are passed through unchanged to isolattice.Sandbox",
+        "Defaults (LocalArtifactStore, LoggingEventSink) apply only when the caller passes nothing",
+        "No raw engine-flag passthrough is offered"
+      ]
+    }
+  ]
+}

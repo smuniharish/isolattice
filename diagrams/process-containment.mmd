@@ -1,0 +1,7 @@
+flowchart LR
+    Runtime["Isolattice runtime"] --> Boundary["Backend boundary<br/>cgroup, Job Object,<br/>container or Pod"]
+    Boundary --> Root["Workload root"]
+    Root --> Child["Child"] --> Grandchild["Grandchild"]
+    Child --> Detached["Detached or<br/>respawned process"]
+    Runtime --> Observe["Observation by<br/>immutable boundary ID"]
+    Observe --> Boundary

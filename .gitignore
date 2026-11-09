@@ -166,13 +166,8 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs/Zensical documentation
+# Zensical documentation
 /site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
 
 # Pyre type checker
 .pyre/
@@ -218,3 +213,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Documentation tooling
+node_modules/

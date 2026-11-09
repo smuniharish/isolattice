@@ -1,0 +1,90 @@
+/* Home page hero. */
+.il-hero {
+  margin: 0 0 2rem;
+  padding: 2.2rem 2rem 1.6rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, rgb(79 70 229 / 12%), rgb(16 185 129 / 10%));
+}
+
+.il-hero h1 {
+  margin-bottom: 0.6rem;
+  font-weight: 700;
+}
+
+.il-hero .il-tagline {
+  max-width: 46rem;
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+
+.il-hero .md-button {
+  margin: 0.4rem 0.4rem 0 0;
+}
+
+[data-md-color-scheme="slate"] .il-hero .md-button:not(.md-button--primary) {
+  border-color: #a5b4fc;
+  color: #c7d2fe;
+}
+
+@media screen and (max-width: 44.9375em) {
+  .il-hero {
+    padding: 1.6rem 1.2rem 1.2rem;
+  }
+
+  .il-hero .md-button {
+    display: block;
+    margin: 0.5rem 0 0;
+    text-align: center;
+  }
+}
+
+/* Diagrams keep a white card so their colors read in both schemes. */
+.md-typeset img.diagram {
+  display: block;
+  margin: 1rem auto;
+  padding: 0.6rem;
+  border-radius: 0.6rem;
+  background: #fff;
+}
+
+/* Program output wraps instead of scrolling sideways. */
+.md-typeset .language-text pre > code {
+  white-space: pre-wrap;
+}
+
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card {
+  border-radius: 0.6rem;
+}
+
+.md-typeset table:not([class]) th,
+.md-typeset table:not([class]) td code {
+  white-space: nowrap;
+}
+
+/* Space between API reference objects. */
+.doc-object {
+  margin-bottom: 1.5rem;
+}
+
+/* "Agentic installation" box on the Agent Skills pages. */
+.md-typeset .il-agentic {
+  margin: 1.5rem 0;
+  padding: 0.4rem 1.4rem 1rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, rgb(79 70 229 / 7%), rgb(16 185 129 / 6%));
+}
+
+.md-typeset .il-agentic > h2 {
+  margin-top: 0.8rem;
+}
+
+.md-typeset .il-agentic .tabbed-set {
+  border-radius: 0.5rem;
+  background: var(--md-default-bg-color);
+}
+
+.md-typeset .il-agentic .tabbed-block {
+  padding: 0 0.8rem;
+}

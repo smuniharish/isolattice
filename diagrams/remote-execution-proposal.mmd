@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant Client
+    participant Server as Remote service (proposed)
+    Client->>Server: create(idempotency key, policy)
+    Server-->>Client: sandbox identity and lease
+    Client->>Server: execute(idempotency key, request)
+    Note over Client,Server: response may be lost
+    Client->>Server: look up operation
+    Server-->>Client: accepted, completed or unknown

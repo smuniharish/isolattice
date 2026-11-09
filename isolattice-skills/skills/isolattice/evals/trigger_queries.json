@@ -1,0 +1,25 @@
+{
+  "skill_name": "isolattice",
+  "queries": [
+    {"query": "run llm-generated python in a sandbox with isolattice, no network and 256 MiB memory", "should_trigger": true, "split": "train"},
+    {"query": "my isolattice podman sandbox raises SandboxCapabilityError: memory_limit unsupported", "should_trigger": true, "split": "train"},
+    {"query": "stream stdout from an isolattice run and cancel it after 30 seconds", "should_trigger": true, "split": "train"},
+    {"query": "replace subprocess.run(shell=True) in our report runner with an isolattice sandbox", "should_trigger": true, "split": "train"},
+    {"query": "pick an isolattice backend for windows that keeps generated code away from user files", "should_trigger": true, "split": "train"},
+    {"query": "take a workspace snapshot of an isolattice instance and restore it later", "should_trigger": true, "split": "train"},
+    {"query": "isolattice close() raised TerminationVerificationError, what should my handler do", "should_trigger": true, "split": "validation"},
+    {"query": "checkpoint a running isolattice podman instance with criu and restore it", "should_trigger": true, "split": "validation"},
+    {"query": "run a job in a kubernetes pod through isolattice with a cpu and memory limit", "should_trigger": true, "split": "validation"},
+    {"query": "why does WindowsJobBackend refuse my default isolattice SandboxPolicy", "should_trigger": true, "split": "validation"},
+    {"query": "write an isolattice ArtifactStore backed by azure blob storage", "should_trigger": false, "split": "train"},
+    {"query": "implement an isolattice EventSink that ships lifecycle events to opentelemetry", "should_trigger": false, "split": "train"},
+    {"query": "write a dockerfile for a python 3.14 web app", "should_trigger": false, "split": "train"},
+    {"query": "set memory limits on a podman container from the command line", "should_trigger": false, "split": "train"},
+    {"query": "configure a kubernetes networkpolicy to deny egress for a namespace", "should_trigger": false, "split": "train"},
+    {"query": "add a custom isolattice backend for firecracker microvms", "should_trigger": false, "split": "train"},
+    {"query": "run pytest in parallel with xdist on github actions", "should_trigger": false, "split": "validation"},
+    {"query": "explain the difference between rootless and rootful podman in general", "should_trigger": false, "split": "validation"},
+    {"query": "implement an isolattice CommandRunner that wraps podman with sudo", "should_trigger": false, "split": "validation"},
+    {"query": "use asyncio.create_subprocess_exec to read a child's output line by line", "should_trigger": false, "split": "validation"}
+  ]
+}

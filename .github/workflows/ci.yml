@@ -1,0 +1,588 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Each job records branch coverage separately; the coverage job gates the union.
+  COVERAGE_ARGS: --cov=isolattice --cov-branch --cov-report= --cov-fail-under=0
+
+jobs:
+  lint:
+    name: Lint, type check and repository invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      # Platform-specific backends are type checked against each platform's standard library.
+      - run: uv run pyrefly check --python-platform linux
+      - run: uv run pyrefly check --python-platform win32
+      - run: uv run pyrefly check --python-platform darwin
+      - run: uv run python scripts/validate_repository.py
+
+  test:
+    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every distinct GitHub-hosted runner image: x64 and arm64 Linux, Windows and macOS.
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - ubuntu-26.04
+          - ubuntu-22.04-arm
+          - ubuntu-24.04-arm
+          - ubuntu-26.04-arm
+          - windows-2022
+          - windows-2025
+          - windows-11-arm
+          - macos-15
+          - macos-26
+          - macos-15-intel
+          - macos-26-intel
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
+    env:
+      HYPOTHESIS_PROFILE: ci
+      COVERAGE_FILE: .coverage.test-${{ matrix.os }}-${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups
+      # Warnings are errors (pyproject.toml). Live suites skip here and run in the live jobs below.
+      - run: uv run pytest ${{ env.COVERAGE_ARGS }}
+        shell: bash
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-test-${{ matrix.os }}-${{ matrix.python-version }}
+          path: ${{ env.COVERAGE_FILE }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  lowest:
+    name: Test with the lowest supported dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --resolution lowest-direct --all-extras --all-groups
+      - run: uv run --no-sync pytest
+
+  package:
+    name: Build and smoke-test the package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv build
+      - run: uvx twine check --strict dist/*
+      - name: Verify the core wheel without optional dependencies
+        run: |
+          uv venv --no-project "$RUNNER_TEMP/wheel"
+          uv pip install --python "$RUNNER_TEMP/wheel" dist/*.whl
+          "$RUNNER_TEMP/wheel/bin/python" -c "import importlib.util; import isolattice; assert importlib.util.find_spec('aiobotocore') is None; assert isolattice.Sandbox"
+          "$RUNNER_TEMP/wheel/bin/python" isolattice-skills/skills/isolattice/scripts/verify_setup.py
+          "$RUNNER_TEMP/wheel/bin/python" isolattice-skills/skills/isolattice-extend/scripts/check_store.py \
+            store_template:SQLiteArtifactStore --path isolattice-skills/skills/isolattice-extend/assets
+      - name: Install the S3 extra and run the setup check
+        run: |
+          uv pip install --python "$RUNNER_TEMP/wheel" "dist/isolattice-$(uv version --short)-py3-none-any.whl[s3]"
+          "$RUNNER_TEMP/wheel/bin/python" isolattice-skills/skills/isolattice/scripts/verify_setup.py --s3
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - run: uv sync --locked --group docs --all-extras
+      - run: uv run zensical build --strict
+      - run: uv run python scripts/check_site_links.py
+      - run: node scripts/render-diagrams.mjs --check
+
+  markdown:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      # Node tooling is installed globally; the repository has no npm manifest.
+      - run: npm install --global --ignore-scripts markdownlint-cli2@0.24.0
+      - run: npm exec --global -- markdownlint-cli2
+
+  distro:
+    name: Test on ${{ matrix.image }} with Python ${{ matrix.python-version }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # glibc and musl distributions beyond the hosted Ubuntu images.
+        image:
+          - debian:stable
+          - fedora:latest
+          - almalinux:latest
+          - rockylinux/rockylinux:latest
+          - amazonlinux:latest
+          - opensuse/leap:latest
+          - opensuse/tumbleweed:latest
+          - archlinux:latest
+          - alpine:latest
+          - voidlinux/voidlinux-musl:latest
+        python-version: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Extract the static uv binary
+        run: |
+          image=ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0
+          container=$(docker create "$image")
+          mkdir -p "$RUNNER_TEMP/uv"
+          docker cp "$container:/uv" "$RUNNER_TEMP/uv/uv"
+          docker rm "$container"
+      # An unprivileged user, so permission checks behave as they do for real callers.
+      - name: Run the test suite
+        env:
+          IMAGE: ${{ matrix.image }}
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp/home -e USER=runner -e HYPOTHESIS_PROFILE=ci \
+            -e UV_CACHE_DIR=/tmp/uv-cache -e UV_PYTHON_INSTALL_DIR=/tmp/python \
+            -e UV_PROJECT_ENVIRONMENT=/tmp/venv -e UV_PYTHON="$PYTHON_VERSION" \
+            -e UV_PYTHON_PREFERENCE=only-managed \
+            -v "$RUNNER_TEMP/uv/uv:/usr/local/bin/uv:ro" \
+            -v "$GITHUB_WORKSPACE:/src" -w /src "$IMAGE" \
+            sh -c 'mkdir -p "$HOME" && uv sync --locked --all-extras --all-groups && uv run --no-sync pytest'
+
+  bsd:
+    name: Test on ${{ matrix.os }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: FreeBSD
+            action: freebsd
+            python: python3.12
+            packages: pkg install -y python312 py312-sqlite3 py312-pip
+          - os: OpenBSD
+            action: openbsd
+            python: python3
+            packages: pkg_add -I python%3 py3-pip
+          - os: NetBSD
+            action: netbsd
+            python: python3.12
+            packages: /usr/sbin/pkg_add pkgin && pkgin -y install python312 py312-sqlite3 py312-pip
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Write the test script
+        env:
+          PYTHON: ${{ matrix.python }}
+          PACKAGES: ${{ matrix.packages }}
+        # Wheels are pure Python or built locally; uv publishes no BSD binaries.
+        run: |
+          cat > "$GITHUB_WORKSPACE/.bsd-test.sh" <<EOF
+          set -eux
+          $PACKAGES
+          $PYTHON -m venv --system-site-packages --without-pip /tmp/venv
+          /tmp/venv/bin/python -m pip install --upgrade pip
+          /tmp/venv/bin/python -m pip install --group test '.[s3]'
+          HYPOTHESIS_PROFILE=ci /tmp/venv/bin/python -m pytest -p no:cacheprovider
+          EOF
+      - if: matrix.action == 'freebsd'
+        uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1.5.9
+        with:
+          usesh: true
+          run: sh .bsd-test.sh
+      - if: matrix.action == 'openbsd'
+        uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3 # v1.4.9
+        with:
+          usesh: true
+          run: sh .bsd-test.sh
+      - if: matrix.action == 'netbsd'
+        uses: vmactions/netbsd-vm@5957cf330aef2e6ddc63c604364c99ce2e02b91d # v1.5.3
+        with:
+          usesh: true
+          run: sh .bsd-test.sh
+
+  live-podman:
+    name: Live Podman (rootless, rootful runc with CRIU) and S3 on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    env:
+      COVERAGE_FILE: .coverage.live-podman-${{ matrix.python-version }}
+      ISOLATTICE_TEST_PODMAN_CONNECTION: isolattice-ci-rootless
+      ISOLATTICE_TEST_PODMAN_IMAGE: docker.io/library/alpine:3.22
+      ISOLATTICE_TEST_PODMAN_RESOURCE_CONNECTION: isolattice-ci-resources
+      ISOLATTICE_TEST_PODMAN_RESOURCE_IMAGE: docker.io/library/alpine:3.22
+      ISOLATTICE_TEST_PODMAN_RESOURCE_ROOTFUL: "1"
+      ISOLATTICE_TEST_PODMAN_ROOTFUL_CONNECTION: isolattice-ci-resources
+      ISOLATTICE_TEST_PODMAN_ROOTFUL_IMAGE: docker.io/library/alpine:3.22
+      ISOLATTICE_TEST_S3_ENDPOINT: http://127.0.0.1:19000
+      ISOLATTICE_TEST_S3_BUCKET: isolattice-test
+      # Disposable credentials for a throwaway object store that exists only inside this job.
+      ISOLATTICE_TEST_S3_ACCESS_KEY_ID: isolattice-test
+      ISOLATTICE_TEST_S3_SECRET_ACCESS_KEY: isolattice-test-secret
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: Install Python tools, Podman, runc and CRIU
+        run: |
+          uv sync --locked --all-extras --all-groups
+          sudo apt-get update
+          sudo apt-get install --yes podman runc software-properties-common
+          # Ubuntu 24.04 ships no CRIU package; use the CRIU project's PPA.
+          sudo add-apt-repository --yes ppa:criu/ppa
+          sudo apt-get install --yes criu
+      - name: Provision explicit test engines and an S3 store, then run every live case
+        shell: bash
+        run: |
+          set -euo pipefail
+          rootless_socket="$RUNNER_TEMP/isolattice-rootless.sock"
+          resource_socket="$RUNNER_TEMP/isolattice-resources.sock"
+          resource_pidfile="$RUNNER_TEMP/isolattice-resources.pid"
+          rootless_pid=""
+          cleanup() {
+            status=$?
+            trap - EXIT
+            if [ "$status" -ne 0 ]; then
+              for log in "$RUNNER_TEMP/isolattice-rootless.log" "$RUNNER_TEMP/isolattice-resources.log"; do
+                if [ -f "$log" ]; then cat "$log"; fi
+              done
+            fi
+            podman rm --force isolattice-s3-test >/dev/null 2>&1 || true
+            if [ -f "$resource_pidfile" ]; then
+              pid="$(cat "$resource_pidfile")"
+              if sudo kill -0 "$pid" 2>/dev/null; then sudo kill "$pid"; fi
+            fi
+            if [ -n "$rootless_pid" ] && kill -0 "$rootless_pid" 2>/dev/null; then
+              kill "$rootless_pid"
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          podman pull "$ISOLATTICE_TEST_PODMAN_IMAGE"
+          sudo podman pull "$ISOLATTICE_TEST_PODMAN_RESOURCE_IMAGE"
+          podman run --detach --name isolattice-s3-test --label io.isolattice.test=s3 \
+            --publish 127.0.0.1:19000:9000 \
+            --env RUSTFS_ACCESS_KEY="$ISOLATTICE_TEST_S3_ACCESS_KEY_ID" \
+            --env RUSTFS_SECRET_KEY="$ISOLATTICE_TEST_S3_SECRET_ACCESS_KEY" \
+            docker.io/rustfs/rustfs:1.0.4
+          podman system service --time=0 "unix://$rootless_socket" \
+            >"$RUNNER_TEMP/isolattice-rootless.log" 2>&1 &
+          rootless_pid=$!
+          # The rootful engine uses runc, which drives the PPA's CRIU for checkpoints.
+          sudo sh -c 'echo $$ > "$1"; exec podman --runtime runc system service --time=0 "$2"' \
+            sh "$resource_pidfile" "unix://$resource_socket" \
+            >"$RUNNER_TEMP/isolattice-resources.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if [ -S "$rootless_socket" ] && [ -S "$resource_socket" ]; then break; fi
+            sleep 1
+          done
+          test -S "$rootless_socket"
+          test -S "$resource_socket"
+          chmod 600 "$rootless_socket"
+          sudo chown "$(id -u):$(id -g)" "$resource_socket"
+          sudo chmod 600 "$resource_socket"
+          podman system connection add "$ISOLATTICE_TEST_PODMAN_CONNECTION" "unix://$rootless_socket"
+          podman system connection add "$ISOLATTICE_TEST_PODMAN_RESOURCE_CONNECTION" "unix://$resource_socket"
+          podman --connection "$ISOLATTICE_TEST_PODMAN_CONNECTION" info
+          podman --connection "$ISOLATTICE_TEST_PODMAN_RESOURCE_CONNECTION" info
+          for attempt in $(seq 1 60); do
+            if AWS_ACCESS_KEY_ID="$ISOLATTICE_TEST_S3_ACCESS_KEY_ID" \
+              AWS_SECRET_ACCESS_KEY="$ISOLATTICE_TEST_S3_SECRET_ACCESS_KEY" AWS_REGION=us-east-1 \
+              aws --endpoint-url "$ISOLATTICE_TEST_S3_ENDPOINT" s3 mb "s3://$ISOLATTICE_TEST_S3_BUCKET" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          report="$RUNNER_TEMP/isolattice-live.xml"
+          uv run --no-sync pytest -m "podman or s3" $COVERAGE_ARGS --junitxml="$report"
+          # The only resource connection is rootful, so the rootless-only budget check skips.
+          uv run --no-sync python scripts/check_live_skips.py "$report" \
+            --allow test_rootless_instance_budget_is_rejected
+          for connection in "$ISOLATTICE_TEST_PODMAN_CONNECTION" "$ISOLATTICE_TEST_PODMAN_RESOURCE_CONNECTION"; do
+            for kind in "ps -a" "pod ps" "volume ls" "image ls"; do
+              remaining="$(podman --connection "$connection" $kind --filter label=io.isolattice.sandbox --quiet)"
+              if [ -n "$remaining" ]; then
+                printf 'Owned %s resources remain on %s:\n%s\n' "$kind" "$connection" "$remaining"
+                exit 1
+              fi
+            done
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-live-podman-${{ matrix.python-version }}
+          path: ${{ env.COVERAGE_FILE }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  live-docker:
+    name: Live Docker Engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COVERAGE_FILE: .coverage.live-docker
+      ISOLATTICE_TEST_DOCKER_HOST: unix:///var/run/docker.sock
+      ISOLATTICE_TEST_DOCKER_IMAGE: docker.io/library/alpine:3.22
+      ISOLATTICE_TEST_DOCKER_ROOTFUL: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups
+      - name: Run every Docker case against the runner's Docker Engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker --host "$ISOLATTICE_TEST_DOCKER_HOST" version
+          docker --host "$ISOLATTICE_TEST_DOCKER_HOST" pull "$ISOLATTICE_TEST_DOCKER_IMAGE"
+          report="$RUNNER_TEMP/isolattice-docker.xml"
+          uv run --no-sync pytest -m docker $COVERAGE_ARGS --junitxml="$report"
+          uv run --no-sync python scripts/check_live_skips.py "$report"
+          remaining="$(docker --host "$ISOLATTICE_TEST_DOCKER_HOST" ps -a --filter label=io.isolattice.sandbox --quiet)"
+          if [ -n "$remaining" ]; then
+            printf 'Owned containers remain:\n%s\n' "$remaining"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-live-docker
+          path: ${{ env.COVERAGE_FILE }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  live-kubernetes:
+    name: Live Kubernetes (kind)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COVERAGE_FILE: .coverage.live-kubernetes
+      ISOLATTICE_TEST_KUBERNETES_CONTEXT: kind-isolattice
+      ISOLATTICE_TEST_KUBERNETES_NAMESPACE: isolattice-test
+      ISOLATTICE_TEST_KUBERNETES_IMAGE: docker.io/library/alpine:3.22
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install Python tools and a verified kind release
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv sync --locked --all-extras --all-groups
+          curl -fsSLo "$RUNNER_TEMP/kind" https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-linux-amd64
+          echo "aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d  $RUNNER_TEMP/kind" | sha256sum --check
+          chmod 755 "$RUNNER_TEMP/kind"
+      - name: Run every Kubernetes case on a disposable kind cluster
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ISOLATTICE_TEST_KUBERNETES_KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          kind="$RUNNER_TEMP/kind"
+          cleanup() {
+            status=$?
+            trap - EXIT
+            "$kind" delete cluster --name isolattice --kubeconfig "$ISOLATTICE_TEST_KUBERNETES_KUBECONFIG" || true
+            exit "$status"
+          }
+          trap cleanup EXIT
+          "$kind" create cluster --name isolattice --kubeconfig "$ISOLATTICE_TEST_KUBERNETES_KUBECONFIG" --wait 120s
+          docker pull "$ISOLATTICE_TEST_KUBERNETES_IMAGE"
+          "$kind" load docker-image "$ISOLATTICE_TEST_KUBERNETES_IMAGE" --name isolattice
+          kubectl --kubeconfig "$ISOLATTICE_TEST_KUBERNETES_KUBECONFIG" --context "$ISOLATTICE_TEST_KUBERNETES_CONTEXT" \
+            create namespace "$ISOLATTICE_TEST_KUBERNETES_NAMESPACE"
+          report="$RUNNER_TEMP/isolattice-kubernetes.xml"
+          uv run --no-sync pytest -m kubernetes $COVERAGE_ARGS --junitxml="$report"
+          uv run --no-sync python scripts/check_live_skips.py "$report"
+          remaining="$(kubectl --kubeconfig "$ISOLATTICE_TEST_KUBERNETES_KUBECONFIG" --context "$ISOLATTICE_TEST_KUBERNETES_CONTEXT" \
+            --namespace "$ISOLATTICE_TEST_KUBERNETES_NAMESPACE" get pods --selector io.isolattice.sandbox --output name)"
+          if [ -n "$remaining" ]; then
+            printf 'Owned Pods remain:\n%s\n' "$remaining"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-live-kubernetes
+          path: ${{ env.COVERAGE_FILE }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  live-linux:
+    name: Live Linux namespaces in a delegated cgroup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      COVERAGE_FILE: .coverage.live-linux
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups
+      - name: Allow unprivileged user namespaces and start a delegated user manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes dbus-user-session
+          # Ubuntu's AppArmor blocks unprivileged user namespaces by default.
+          sudo sysctl --write kernel.apparmor_restrict_unprivileged_userns=0
+          sudo loginctl enable-linger "$(id -un)"
+          for attempt in $(seq 1 30); do
+            if [ -S "/run/user/$(id -u)/bus" ]; then break; fi
+            sleep 1
+          done
+          test -S "/run/user/$(id -u)/bus"
+      - name: Run every Linux namespace case in a delegated scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          report="$RUNNER_TEMP/isolattice-linux.xml"
+          scripts/linux/isolattice-delegated-run.sh sh -c \
+            'ISOLATTICE_TEST_LINUX_CGROUP_ROOT=$ISOLATTICE_LINUX_CGROUP_ROOT exec uv run --no-sync pytest tests/integration/test_linux_backend.py $COVERAGE_ARGS --junitxml="$1"' \
+            sh "$report"
+          uv run --no-sync python scripts/check_live_skips.py "$report"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-live-linux
+          path: ${{ env.COVERAGE_FILE }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  live-windows:
+    name: Live Windows Job Object and AppContainer on Python ${{ matrix.python-version }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    env:
+      COVERAGE_FILE: .coverage.live-windows-${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A tool-cache interpreter, like one under Program Files, can be granted to AppContainers.
+      - id: python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-extras --all-groups --python "${{ steps.python.outputs.python-path }}"
+      - name: Let AppContainers read the base interpreter
+        shell: pwsh
+        run: |
+          $base = uv run --no-sync python -c "import sys; print(sys.base_prefix)"
+          # ALL APPLICATION PACKAGES and ALL RESTRICTED APPLICATION PACKAGES, as under Program Files.
+          icacls $base /grant "*S-1-15-2-1:(OI)(CI)RX" "*S-1-15-2-2:(OI)(CI)RX" /Q
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run every Job Object, restricted-token and AppContainer case
+        shell: pwsh
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP "isolattice-windows.xml"
+          uv run --no-sync pytest tests/integration/test_windows_backend.py tests/integration/test_windows_appcontainer.py $env:COVERAGE_ARGS.Split(" ") --junitxml=$report
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          uv run --no-sync python scripts/check_live_skips.py $report
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $left = Get-ChildItem (Join-Path $env:LOCALAPPDATA "Packages") -Filter "isolattice.*" -ErrorAction SilentlyContinue
+          if ($left) { Write-Error "AppContainer profiles remain: $($left.Name -join ', ')"; exit 1 }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-live-windows-${{ matrix.python-version }}
+          path: ${{ env.COVERAGE_FILE }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  coverage:
+    name: Combined coverage
+    needs: [test, live-podman, live-docker, live-kubernetes, live-linux, live-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --group test
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+      - run: uv run coverage combine
+      # fail_under in pyproject.toml gates every platform's unit and live runs together.
+      - run: uv run coverage report

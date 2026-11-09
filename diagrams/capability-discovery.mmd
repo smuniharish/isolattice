@@ -1,0 +1,6 @@
+flowchart LR
+    Host["Host facts<br/>kernel, cgroups, OS APIs"] --> Probe["Backend probes"]
+    Engine["Engine or cluster<br/>configuration"] --> Probe
+    Config["Backend constructor<br/>arguments"] --> Probe
+    Probe --> Report["BackendReport<br/>CapabilityEvidence per key"]
+    Report --> Match["prepare: required<br/>capabilities matched"]

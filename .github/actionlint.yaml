@@ -1,0 +1,9 @@
+# Current GitHub-hosted runner images that this actionlint release does not list yet.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - ubuntu-26.04-arm
+    - windows-11-arm
+    - macos-26
+    - macos-15-intel
+    - macos-26-intel

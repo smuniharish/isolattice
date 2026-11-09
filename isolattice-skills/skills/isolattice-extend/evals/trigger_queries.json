@@ -1,0 +1,25 @@
+{
+  "skill_name": "isolattice-extend",
+  "queries": [
+    {"query": "write an isolattice ArtifactStore backed by azure blob storage", "should_trigger": true, "split": "train"},
+    {"query": "implement an isolattice EventSink that ships lifecycle events to opentelemetry", "should_trigger": true, "split": "train"},
+    {"query": "add a custom isolattice backend for firecracker microvms", "should_trigger": true, "split": "train"},
+    {"query": "my custom isolattice store fails check_artifact_store: publishing an existing key did not fail", "should_trigger": true, "split": "train"},
+    {"query": "store isolattice snapshots and checkpoints in postgres instead of local files", "should_trigger": true, "split": "train"},
+    {"query": "let users of our wrapper package bring their own isolattice artifact store and event sink", "should_trigger": true, "split": "train"},
+    {"query": "implement an isolattice CommandRunner that wraps podman with sudo", "should_trigger": true, "split": "validation"},
+    {"query": "write a TerminationDriver for our new isolattice backend", "should_trigger": true, "split": "validation"},
+    {"query": "count how many kubectl processes isolattice starts with a custom runner", "should_trigger": true, "split": "validation"},
+    {"query": "send isolattice termination.unknown events to pagerduty", "should_trigger": true, "split": "validation"},
+    {"query": "run llm-generated python in a sandbox with isolattice, no network and 256 MiB memory", "should_trigger": false, "split": "train"},
+    {"query": "my isolattice podman sandbox raises SandboxCapabilityError: memory_limit unsupported", "should_trigger": false, "split": "train"},
+    {"query": "take a workspace snapshot of an isolattice instance and restore it later", "should_trigger": false, "split": "train"},
+    {"query": "design a python plugin system with entry points", "should_trigger": false, "split": "train"},
+    {"query": "write a boto3 script that uploads files to s3 with multipart", "should_trigger": false, "split": "train"},
+    {"query": "explain python abstract base classes versus typing protocols", "should_trigger": false, "split": "train"},
+    {"query": "why does WindowsJobBackend refuse my default isolattice SandboxPolicy", "should_trigger": false, "split": "validation"},
+    {"query": "set up opentelemetry tracing for a fastapi app", "should_trigger": false, "split": "validation"},
+    {"query": "checkpoint a running isolattice podman instance with criu and restore it", "should_trigger": false, "split": "validation"},
+    {"query": "write a sqlite migration that adds a blob column", "should_trigger": false, "split": "validation"}
+  ]
+}

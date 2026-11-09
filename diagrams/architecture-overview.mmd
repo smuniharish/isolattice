@@ -1,0 +1,30 @@
+flowchart TD
+    App["Application code"] --> API["Public async API<br/>Sandbox, SandboxInstance,<br/>ExecutionHandle"]
+    API --> Policy["Policy validation and<br/>capability discovery"]
+    Policy --> Select["Explicit backend<br/>fail-closed prepare"]
+    Select --> Native
+    Select --> Containers
+    Select -.-> Proposed
+    subgraph Native["Native backends"]
+        direction TB
+        Linux["Linux namespaces"]
+        Windows["Windows Job /<br/>AppContainer"]
+    end
+    subgraph Containers["Container backends"]
+        direction TB
+        Podman["Podman"]
+        Docker["Docker API"]
+        K8s["Kubernetes"]
+    end
+    subgraph Proposed["Proposed (not implemented)"]
+        direction TB
+        MacOS["macOS"]
+        Remote["Remote"]
+    end
+    Native --> Runtime["Runtime<br/>executions, snapshots,<br/>checkpoints"]
+    Containers --> Runtime
+    Runtime --> Term["Containment and<br/>verified termination"]
+    Term --> Events["Events and owned cleanup"]
+    classDef proposed fill:#f5f5f5,stroke:#9aa5b5,stroke-dasharray:5 5,color:#5a6577
+    class MacOS,Remote proposed
+    style Proposed fill:#fafafa,stroke:#9aa5b5,stroke-dasharray:5 5

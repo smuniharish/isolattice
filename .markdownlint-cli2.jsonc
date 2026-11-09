@@ -1,0 +1,16 @@
+{
+  "globs": ["*.md", "docs/**/*.md", "examples/**/*.md", ".github/**/*.md"],
+  "config": {
+    "default": true,
+    // Python-Markdown nests lists by four spaces.
+    "MD007": {"indent": 4},
+    "MD013": false,
+    "MD033": false,
+    "MD041": false,
+    // Zensical admonitions and content tabs indent their bodies by four spaces.
+    "MD046": false,
+    // Zensical grid cards use "-   " list markers.
+    "MD030": false,
+    "MD060": false
+  }
+}

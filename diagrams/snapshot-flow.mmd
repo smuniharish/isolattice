@@ -1,0 +1,7 @@
+flowchart LR
+    Source["Workspace or<br/>paused container root"] --> Export["Backend export<br/>to private staging"]
+    Export --> Validate["Tar validation<br/>names, types, limits"]
+    Validate --> Seal["ArtifactManifest<br/>SHA-256 and size"]
+    Seal --> Store["ArtifactStore.publish<br/>never overwrites"]
+    Store --> Fetch["fetch and re-verify<br/>manifest, digest, tar"]
+    Fetch --> Restore["New instance<br/>Sandbox.create"]

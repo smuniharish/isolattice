@@ -1,0 +1,30 @@
+{
+  "mermaidVersion": "12.2.0",
+  "renderOptions": {
+    "scale": 2,
+    "background": "white"
+  },
+  "configChecksum": "368285a037f89a1d8f942f9075a7fd19bdc3a15992cdd1290df4df5a7996fdf8",
+  "sources": {
+    "adr-lifecycle.mmd": "0911256b2ae60baaf32eee4645cf7895d125b2461b2be77ae1ed616f76d98f3a",
+    "architecture-overview.mmd": "5fe61b41cc20138b517554fe48e12c4d4b16e803d9b52f9cdb2fb4a881d793c1",
+    "backend-selection.mmd": "5f14bbd62947d07c162ab1a5ab61901c265504d7c543bd3cf714b52baaec6100",
+    "backend-session-sequence.mmd": "8b96fef597bd800405b2cbb3a5a8b48593a4a0d00d39cefe24f930c88a816c0f",
+    "capability-discovery.mmd": "b1b647f4b083131dc2b4132b1d926673ca65a4c049f8fe0ff34557cdab6dd794",
+    "checkpoint-flow.mmd": "c651b8487d9f64be4ebc657f5cd1be4917fe54e9907329dc365bffc26ddbe537",
+    "container-backends.mmd": "adf55c60646b4bdecdd46d203f0e5cf89722595b3f98487c852c31eae5cb24d7",
+    "domain-model.mmd": "cf1695ba61cd3a1e37b7643a8a67396c7423042f4efbfd571f325c35c92a6b22",
+    "event-flow.mmd": "e917351432788756ee7cafb02f38f1693a2251f60d9987cd25074ff713bb804e",
+    "execution-lifecycle-overview.mmd": "49468a928f9e39079ec9eb5ae883c856fc7f11f97d075f28ddfac9aa79d0bb75",
+    "execution-lifecycle.mmd": "ba58feb62a63d43ab29b2c53f672f9be38b1c2a9277857f3a9de1e31e13b490d",
+    "instance-lifecycle.mmd": "7ff08204b2e9a5664755af78c47e2bbd75988fa31a17b2473e36d452dc750881",
+    "packaging-flow.mmd": "0a08d886dfc5863e6ffa5767de829e07122fab93df43acaf68e2895d894551d9",
+    "policy-enforcement-flow.mmd": "9c0d6c8e3fb6e71ec81499d931f21a7bb3f46d7ad9e7588b7feab2ec00698010",
+    "process-containment.mmd": "35aa0418b76e2b3233390be92883940ec4c1062c4e9add445a318a1a6b27662f",
+    "remote-execution-proposal.mmd": "48430872048ff32ee6b75ca4d6120ad420c6132b9ae4f35b96cd6f8293877180",
+    "snapshot-flow.mmd": "8f0d39886df193f49bc31a453e2db50c108ddac65789593705b5eac4805da16e",
+    "termination-engine.mmd": "c90b1bb98771f6741dbdb5c712a40d71549317803b051e879f60cf964dc3a284",
+    "testing-levels.mmd": "c9a6b7aec7d6a89144ae382dd423bbbcdac2ce57afbe04c557494cae9c1c0c99",
+    "threat-model.mmd": "157f6f157793be3511d51ef8dd35c9cdfd09a0c9bf0d3958cf66426ae674950c"
+  }
+}

@@ -1,0 +1,13 @@
+flowchart TD
+    Trigger["Completion, timeout,<br/>cancel, stop or kill"] --> Observe["observe()"]
+    Observe -->|RUNNING| Graceful["signal(force=False)<br/>unless kill requested"]
+    Graceful --> Force["signal(force=True)<br/>if still RUNNING"]
+    Force --> Observe2["observe() again"]
+    Observe -->|EXITED or CREATED| Confirm["Confirm the same state<br/>after verification_interval"]
+    Observe2 --> Confirm
+    Confirm --> Release["remove() then exists()"]
+    Release -->|gone| Done["TerminationReport<br/>terminated, released"]
+    Release -->|present or error| Retry{"Attempts left?"}
+    Observe -->|UNKNOWN| Retry
+    Retry -->|yes, after retry_delay| Observe
+    Retry -->|no or total_timeout| Fail["TerminationVerificationError<br/>non_empty or unknown"]

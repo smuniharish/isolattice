@@ -1,0 +1,193 @@
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14"]
+build-backend = "uv_build"
+
+[project]
+name = "isolattice"
+version = "0.1.0"
+description = "Asynchronous, cross-platform sandbox execution framework with explicit, verified backend capabilities."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+  { name = "S. Muni Harish", email = "samamuniharish@gmail.com" },
+]
+keywords = [
+  "sandbox",
+  "isolation",
+  "containment",
+  "asyncio",
+  "podman",
+  "docker",
+  "kubernetes",
+  "appcontainer",
+  "namespaces",
+  "security",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Framework :: AsyncIO",
+  "Intended Audience :: Developers",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Systems Administration",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+s3 = ["aiobotocore>=3.10.0,<4"]
+all = ["isolattice[s3]"]
+
+[project.urls]
+Homepage = "https://github.com/smuniharish/isolattice"
+Documentation = "https://isolattice.readthedocs.io/en/latest/"
+Changelog = "https://github.com/smuniharish/isolattice/blob/main/CHANGELOG.md"
+Issues = "https://github.com/smuniharish/isolattice/issues"
+Repository = "https://github.com/smuniharish/isolattice"
+
+[dependency-groups]
+test = [
+  "coverage[toml]>=7.17.2",
+  "hypothesis>=6.170.15",
+  "markdown>=3.11.3,<4",
+  "pytest>=9.2.0",
+  "pytest-cov>=7.1.0",
+  "pyyaml>=6.0.3,<7",
+  "skills-ref>=0.1.1,<1",
+]
+lint = ["ruff>=0.17.4"]
+types = [
+  "pyrefly>=1.4.1",
+  "types-markdown>=3.11.3.20261108",
+  "types-pyyaml>=6.0.12.20261103",
+]
+docs = [
+  "mkdocstrings-python>=2.0.10,<3",
+  "zensical>=0.1.0,<0.2",
+]
+dev = [
+  { include-group = "test" },
+  { include-group = "lint" },
+  { include-group = "types" },
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+filterwarnings = ["error"]
+markers = [
+  "podman: integration tests requiring explicitly configured Podman engine profiles",
+  "docker: integration tests requiring an explicitly configured Docker API endpoint",
+  "kubernetes: integration tests requiring an explicitly configured Kubernetes cluster",
+  "s3: integration tests requiring an explicitly configured S3-compatible endpoint",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "A",
+  "ARG",
+  "ASYNC",
+  "B",
+  "C4",
+  "D",
+  "DTZ",
+  "E",
+  "ERA",
+  "F",
+  "I",
+  "N",
+  "PERF",
+  "PIE",
+  "PT",
+  "PTH",
+  "RUF",
+  "S",
+  "SIM",
+  "T20",
+  "TC",
+  "UP",
+  "W",
+]
+# Google style documents constructor arguments on the class, not on __init__.
+ignore = ["D105", "D107", "S101"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Fail-closed BackendSession defaults deliberately ignore their arguments.
+"src/isolattice/backend.py" = ["ARG002"]
+# Sandbox paths such as /tmp name locations inside the boundary, not host files.
+"src/isolattice/backends/*.py" = ["S108"]
+# Launch helpers run as isolated scripts on raw descriptors and paths before and
+# while the boundary is built; they exec trusted, validated workload argv.
+"src/isolattice/backends/_*_helper.py" = ["PTH", "S108", "S606"]
+"src/isolattice/backends/_podman_log_filter.py" = ["S603", "T201"]
+"examples/**/*.py" = ["ARG", "D", "T201"]
+"scripts/**/*.py" = ["ARG", "D", "T201"]
+# Live tests drive fixed, trusted argv (podman, the base interpreter) through subprocess.
+"tests/**/*.py" = ["A002", "ARG", "D", "S101", "S105", "S106", "S108", "S603"]
+"isolattice-skills/**/scripts/*.py" = ["ARG", "D", "T201"]
+"isolattice-skills/**/assets/*.py" = ["ARG", "D"]
+# Eval inputs are the unsafe starting points the skills teach agents to fix.
+"isolattice-skills/**/evals/files/**/*.py" = ["ARG", "D", "S602", "T201"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.pyrefly]
+project-includes = ["src", "tests", "examples", "scripts", "isolattice-skills"]
+search-path = [
+  "src",
+  ".",
+  "isolattice-skills/skills/isolattice/assets",
+  "isolattice-skills/skills/isolattice-extend/assets",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["isolattice"]
+relative_files = true
+# These helpers run inside the sandbox under the base interpreter, where coverage cannot load;
+# the live backend tests exercise them.
+omit = ["*/isolattice/backends/_linux_helper.py", "*/isolattice/backends/_windows_helper.py"]
+
+[tool.coverage.paths]
+source = [
+  "src/isolattice",
+  "*/src/isolattice",
+  "*\\src\\isolattice",
+  "*/site-packages/isolattice",
+  "*\\site-packages\\isolattice",
+]
+
+[tool.coverage.report]
+# Verified floor of unit + Windows + Podman/S3 + Docker Engine + kind + Linux runs combined (87.88%).
+# Core modules are at 98-100%; the remainder is backend engine-fault branches.
+fail_under = 87
+show_missing = true
+skip_covered = true
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "^\\s*\\.\\.\\.$",
+  "@abstractmethod",
+]

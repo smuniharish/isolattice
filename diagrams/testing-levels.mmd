@@ -1,0 +1,4 @@
+flowchart LR
+    Unit["Unit and contract tests<br/>fakes, 100% coverage"] --> Property["Hypothesis<br/>property tests"]
+    Property --> Live["Live suites<br/>real kernels and engines"]
+    Live --> Qualification["Security qualification<br/>not yet performed"]

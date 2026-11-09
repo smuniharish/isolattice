@@ -1,0 +1,14 @@
+classDiagram
+    direction LR
+    Sandbox "1" --> "1" Backend : explicit
+    Sandbox "1" --> "*" SandboxInstance : owns
+    SandboxInstance "1" --> "1" BackendSession : owns
+    SandboxInstance "1" --> "1" SandboxPolicy
+    SandboxInstance "1" --> "*" ExecutionHandle : owns
+    ExecutionHandle "1" --> "0..1" Boundary : owns
+    ExecutionHandle ..> ExecutionResult : produces
+    ExecutionResult --> TerminationReport
+    Backend ..> BackendReport : discover
+    BackendReport --> "*" CapabilityEvidence
+    SandboxPolicy --> TerminationPolicy
+    SandboxPolicy --> "0..1" ResourceBudget

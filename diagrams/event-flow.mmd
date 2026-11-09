@@ -1,0 +1,6 @@
+flowchart LR
+    Runtime["Runtime lifecycle"] --> Event["SandboxEvent<br/>kind, IDs, scalar detail"]
+    Event --> Sink["EventSink.emit"]
+    Sink --> Logging["LoggingEventSink<br/>Python logging"]
+    Sink --> Custom["Custom sink<br/>queue and export"]
+    Workload["Workload output"] --> Output["ExecutionHandle.output<br/>and ExecutionResult"]

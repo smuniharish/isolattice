@@ -1,0 +1,5 @@
+flowchart LR
+    Source["src/isolattice<br/>py.typed"] --> Build["uv build<br/>uv_build backend"]
+    Build --> Artifacts["Wheel and sdist<br/>no runtime dependencies"]
+    Artifacts --> Install["pip install isolattice<br/>optional extra s3"]
+    Install --> Runtime["Python 3.12 to 3.15<br/>Linux, Windows, macOS"]

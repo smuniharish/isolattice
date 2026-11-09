@@ -1,0 +1,6 @@
+flowchart LR
+    Policy["SandboxPolicy"] --> Prepare["Backend prepare<br/>fail closed"]
+    Prepare --> Boundary["Owned boundary<br/>per execution"]
+    Boundary --> Run["Bounded execution<br/>and streaming"]
+    Run --> Verify["Verified<br/>termination"]
+    Verify --> Release["Release and<br/>report"]

@@ -1,0 +1,8 @@
+flowchart TD
+    Caller["Application constructs<br/>one backend instance"] --> Owner["Sandbox(backend=...)"]
+    Owner --> Discover["discover(): BackendReport"]
+    Owner --> Create["create(policy=...)"]
+    Create --> Prepare["Backend.prepare"]
+    Prepare --> Checks["Policy support<br/>required capabilities"]
+    Checks -->|all met| Ready["SandboxInstance"]
+    Checks -->|any unmet| Error["SandboxCapabilityError<br/>no fallback backend"]

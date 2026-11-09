@@ -1,0 +1,22 @@
+version: 2
+
+# Zensical builds the site from zensical.toml; see
+# https://docs.readthedocs.com/platform/stable/intro/zensical.html
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.14"
+  jobs:
+    create_environment:
+      - asdf plugin add uv
+      - asdf install uv latest
+      - asdf global uv latest
+    install:
+      - uv sync --locked --group docs --all-extras
+    build:
+      html:
+        - uv run --no-sync zensical build --strict
+        - uv run --no-sync python scripts/check_site_links.py
+    post_build:
+      - mkdir -p $READTHEDOCS_OUTPUT/html/
+      - cp --recursive site/* $READTHEDOCS_OUTPUT/html/

@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a capability, backend or extension point for Isolattice
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Isolattice adds a capability only when a backend
+        enforces it and live tests verify it, so describe the guarantee you need, not
+        just the API shape. New subsystems go through an architecture decision record.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: >
+        The policy, capability, backend or extension point (Backend, ArtifactStore,
+        EventSink, CommandRunner) you would like, and the platforms it applies to.
+    validations:
+      required: true
+
+  - type: textarea
+    id: enforcement
+    attributes:
+      label: Enforcement mechanism
+      description: Which operating-system or engine primitive would enforce it, and how could a test prove it?
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

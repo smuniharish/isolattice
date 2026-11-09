@@ -1,0 +1,223 @@
+schema: 1
+status: runtime
+categories:
+  - id: getting-started
+    category: 1
+    status: partial
+    features: [hello-world, first-sandbox, python-script, shell-command, multiple-commands, async-ownership]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/01-project-overview.md]
+    examples: examples/01-getting-started/README.md
+    security: docs/security/guarantees.md
+    planned_tests: [creation-contract, strict-policy-rejection, context-exit]
+    implemented: [first-sandbox, shell-command, async-ownership]
+    tests: [tests/unit/test_async_runtime.py, tests/integration/test_podman_backend.py]
+    runnable_examples: [examples/01-getting-started/podman_hello.py]
+  - id: execution
+    category: 2
+    status: partial
+    features: [argv, script, cwd, explicit-environment, controlled-inheritance, stdin, stdout-streaming, stderr-streaming, backpressure, capture-limits, exit-codes, execution-events, concurrent-execution]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/04-domain-model.md, docs/architecture/18-observability.md]
+    examples: examples/02-execution/README.md
+    security: docs/security/best-practices.md
+    planned_tests: [command-variants, binary-io, slow-consumers, bounded-capture]
+    implemented: [argv, cwd, explicit-environment, stdin, stdout-streaming, stderr-streaming, backpressure, capture-limits, exit-codes, execution-events, concurrent-execution]
+    tests: [tests/unit/test_async_runtime.py, tests/unit/test_properties.py, tests/unit/test_extension_points.py, tests/integration/test_podman_backend.py]
+    runnable_examples: [examples/01-getting-started/podman_hello.py, examples/02-execution/podman_io.py, examples/06-async-and-cancellation/podman_stream_cancel.py, examples/15-observability/podman_event_sink.py]
+  - id: security
+    category: 3
+    status: partial
+    features: [isolated-root, readonly-paths, writable-paths, mounts, path-restrictions, safe-cwd, no-network, enabled-network, destination-allowlist, inbound-outbound-restrictions, proxy, environment-isolation, secret-filtering, process-visibility, process-escape, devices, privileges, combined-policies]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/05-policy-model.md, docs/architecture/17-security-threat-model.md]
+    examples: examples/03-security/README.md
+    security: docs/security/capability-enforcement.md
+    planned_tests: [filesystem-escape, network-rebinding, host-secret-leak, privilege-device-denial]
+    implemented: [isolated-root, readonly-paths, writable-paths, path-restrictions, no-network, environment-isolation, process-visibility, privileges]
+    tests: [tests/unit/test_runtime_models.py, tests/integration/test_podman_backend.py, tests/integration/test_windows_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_windows_appcontainer.py]
+    runnable_examples: [examples/01-getting-started/podman_hello.py, examples/08-native-backends/linux_namespaces.py, examples/08-native-backends/windows_appcontainer.py]
+  - id: resources
+    category: 4
+    status: partial
+    features: [cpu, memory, scratch-disk-bytes, disk-inodes, process-count, wall-time, aggregate-accounting, monitoring]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/05-policy-model.md]
+    examples: examples/04-resource-management/README.md
+    security: docs/security/threat-model.md
+    planned_tests: [exact-budget-enforcement, descendant-accounting, cleanup-under-pressure]
+    implemented: [cpu, memory, scratch-disk-bytes, process-count, wall-time, aggregate-accounting]
+    tests: [tests/unit/test_podman_contract.py, tests/unit/test_properties.py, tests/unit/test_podman_instance_contract.py, tests/integration/test_podman_resources.py, tests/integration/test_podman_backend.py, tests/integration/test_podman_instance.py, tests/integration/test_windows_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_windows_appcontainer.py]
+    runnable_examples: [examples/04-resource-management/podman_limits.py, examples/04-resource-management/podman_instance_budget.py, examples/04-resource-management/windows_job_limits.py]
+  - id: lifecycle
+    category: 5
+    status: partial
+    features: [create-start-ready, run-pause-resume-complete, stop-kill-close, grace-force, children-grandchildren, fork-spawn, detached-background, multiprocessing-pools, supervisor-respawn, orphan-prevention, boundary-generation, ownership, stable-termination]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/09-lifecycle-state-machine.md, docs/architecture/10-process-containment.md, docs/architecture/11-termination-engine.md]
+    examples: examples/05-process-lifecycle/README.md
+    security: docs/security/process-escape-prevention.md
+    planned_tests: [state-transitions, identity-reuse, descendant-tree, respawn-stability]
+    implemented: [stop-kill-close, grace-force, children-grandchildren, orphan-prevention, boundary-generation, ownership, stable-termination]
+    tests: [tests/unit/test_termination.py, tests/unit/test_properties.py, tests/integration/test_podman_backend.py, tests/integration/test_windows_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_windows_appcontainer.py]
+    runnable_examples: [examples/06-async-and-cancellation/podman_stream_cancel.py, examples/04-resource-management/windows_job_limits.py]
+  - id: async
+    category: 6
+    status: partial
+    features: [async-only, concurrent-sandboxes, cancellation, cooperative-startup-cancellation, repeated-cancellation, timeout, race-safety, bounded-cleanup, parent-shutdown, failure-cleanup, error-groups]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/11-termination-engine.md, docs/architecture/12-exception-model.md]
+    examples: examples/06-async-and-cancellation/README.md
+    security: docs/security/guarantees.md
+    planned_tests: [startup-stop-race, cancelled-waiters, exact-attempts, cleanup-error-preservation]
+    implemented: [async-only, concurrent-sandboxes, cancellation, cooperative-startup-cancellation, repeated-cancellation, timeout, bounded-cleanup, failure-cleanup, error-groups]
+    tests: [tests/unit/test_async_runtime.py, tests/unit/test_podman_contract.py, tests/integration/test_podman_backend.py]
+    runnable_examples: [examples/06-async-and-cancellation/podman_stream_cancel.py]
+  - id: capabilities
+    category: 7
+    status: partial
+    features: [discovery, supported-limited-unsupported, required-preferred-disabled, evidence-freshness, explicit-selection, auto-selection, preferences, compatibility, health-capacity, backend-failure]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/06-capability-model.md, docs/architecture/08-backend-resolution.md]
+    examples: examples/07-capabilities-and-backends/README.md
+    security: docs/security/capability-enforcement.md
+    planned_tests: [granular-match, stale-probe, rejected-alternative, explicit-engine-unavailable]
+    implemented: [discovery, supported-limited-unsupported, explicit-selection, backend-failure]
+    tests: [tests/unit/test_runtime_models.py, tests/unit/test_podman_contract.py, tests/unit/test_linux_contract.py, tests/unit/test_windows_appcontainer_contract.py, tests/integration/test_podman_backend.py, tests/integration/test_windows_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_windows_appcontainer.py]
+    runnable_examples: [examples/07-capabilities-and-backends/podman_capabilities.py, examples/07-capabilities-and-backends/windows_job_capabilities.py]
+  - id: native
+    category: 8
+    status: partial
+    features: [linux-namespaces-cgroups-landlock-seccomp, macos-seatbelt-feasibility, windows-job-objects, windows-appcontainer-tokens-acls, windows-restricted-low-integrity-token, native-health, native-identity]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/07-backend-contracts.md, docs/architecture/10-process-containment.md]
+    examples: examples/08-native-backends/README.md
+    security: docs/security/platform-limitations.md
+    planned_tests: [linux-migration-denial, windows-appcontainer-restrictions, windows-wmi-broker-escape, macos-capability-rejection]
+    implemented: [linux-namespaces-cgroups-landlock-seccomp, windows-job-objects, windows-appcontainer-tokens-acls, windows-restricted-low-integrity-token]
+    tests: [tests/unit/test_linux_contract.py, tests/unit/test_windows_appcontainer_contract.py, tests/unit/test_windows_job_contract.py, tests/integration/test_windows_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_windows_appcontainer.py]
+    runnable_examples: [examples/04-resource-management/windows_job_limits.py, examples/07-capabilities-and-backends/windows_job_capabilities.py, examples/08-native-backends/linux_namespaces.py, examples/08-native-backends/windows_appcontainer.py, examples/08-native-backends/windows_restricted_token.py]
+  - id: containers
+    category: 9
+    status: partial
+    features: [docker, podman, podman-desktop, connection-provenance, rootless, explicit-rootful, cgroup-v2-budgets, mounts-resources-security-network, engine-streaming, inspection-monitoring, verified-container-cleanup]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/16-container-backend-architecture.md]
+    examples: examples/09-container-integrations/README.md
+    security: docs/security/platform-limitations.md
+    planned_tests: [engine-identity, effective-security, sdk-cancellation, engine-loss]
+    implemented: [docker, podman, rootless, explicit-rootful, cgroup-v2-budgets, connection-provenance, engine-streaming, verified-container-cleanup]
+    tests: [tests/unit/test_termination.py, tests/unit/test_podman_contract.py, tests/unit/test_docker_contract.py, tests/integration/test_podman_backend.py, tests/integration/test_podman_resources.py, tests/integration/test_docker_backend.py]
+    runnable_examples: [examples/01-getting-started/podman_hello.py, examples/04-resource-management/podman_limits.py, examples/06-async-and-cancellation/podman_stream_cancel.py, examples/09-container-integrations/docker_isolated_run.py]
+  - id: kubernetes
+    category: 10
+    status: partial
+    features: [local-cluster, pods-jobs, namespaces, requests-limits-quotas, security-contexts, serviceaccounts-rbac, networkpolicies-cni, persistent-volumes-csi, node-selection-multinode, logs-streaming, recovery-orphans, custom-cluster-config]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/16-container-backend-architecture.md]
+    examples: examples/10-kubernetes/README.md
+    security: docs/security/capability-enforcement.md
+    planned_tests: [cni-denial, admission-rbac, job-retry-identity, node-loss-unknown]
+    implemented: [local-cluster, namespaces, requests-limits-quotas, security-contexts, logs-streaming]
+    tests: [tests/unit/test_kubernetes_contract.py, tests/integration/test_kubernetes_backend.py]
+    runnable_examples: [examples/10-kubernetes/kubernetes_isolated_run.py]
+  - id: remote
+    category: 11
+    status: proposed
+    features: [endpoint-registry, capability-negotiation, health-capacity, authn-authz-owner, heartbeat-leases-expiry, durable-idempotency, orphan-cleanup, boundary-verification, priority, round-robin, least-loaded, lowest-latency, capability-aware, failover, migration-restart-boundaries]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/15-remote-backend-protocol.md]
+    examples: examples/11-remote-execution/README.md
+    security: docs/security/threat-model.md
+    planned_tests: [partition-acceptance, lease-expiry, owner-isolation, duplicate-key-reconciliation]
+    tests: []
+  - id: snapshots
+    category: 12
+    status: partial
+    features: [cold-create-list-restore-delete, persistence, export-import, container-root-snapshots, integrity-authenticity, storage, safe-extraction, secret-policy]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/13-snapshot-architecture.md]
+    examples: examples/12-snapshots/README.md
+    security: docs/security/best-practices.md
+    planned_tests: [consistent-capture, tampering-traversal-bomb, owner-restore, partial-upload]
+    implemented: [persistence, export-import, container-root-snapshots, storage, safe-extraction]
+    tests: [tests/unit/test_runtime_artifacts.py, tests/unit/test_model_contracts.py, tests/unit/test_extension_points.py, tests/unit/test_s3_store_contract.py, tests/integration/test_s3_store.py, tests/unit/test_container_snapshot_contract.py, tests/unit/test_podman_snapshot_contract.py, tests/integration/test_podman_instance.py, tests/integration/test_podman_container_snapshot.py, tests/integration/test_podman_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_windows_appcontainer.py]
+    runnable_examples: [examples/12-snapshots/podman_workspace_snapshot.py, examples/12-snapshots/podman_container_snapshot.py]
+  - id: checkpoints
+    category: 13
+    status: partial
+    features: [memory-registers-threads-position, descriptors-process-tree, supported-sockets, backend-state, criu-runtime, compatibility, live-restore, checkpoint-storage]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/14-checkpoint-architecture.md]
+    examples: examples/13-checkpoints/README.md
+    security: docs/security/best-practices.md
+    planned_tests: [real-position-restore, corrupt-state, incompatible-runtime, source-recovery]
+    implemented: [memory-registers-threads-position, criu-runtime, checkpoint-storage]
+    tests: [tests/unit/test_runtime_artifacts.py, tests/unit/test_podman_instance_contract.py, tests/integration/test_podman_instance.py, tests/integration/test_podman_backend.py]
+    runnable_examples: [examples/13-checkpoints/podman_checkpoint.py]
+  - id: customization
+    category: 14
+    status: partial
+    features: [backend, policy, capability-provider, resolver, resource-controller, event-handler, command-runner, logger, metrics-exporter, snapshot-storage, checkpoint-storage, remote-authenticator, configuration-provider, trusted-plugin-registration, contract-versioning]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/07-backend-contracts.md, docs/architecture/04-domain-model.md]
+    examples: examples/14-customization/README.md
+    security: docs/security/best-practices.md
+    planned_tests: [plugin-trust, incompatible-contract, forbidden-validator-bypass, handler-failure]
+    implemented: [backend, event-handler, command-runner, snapshot-storage, checkpoint-storage]
+    tests: [tests/unit/test_extension_points.py, tests/unit/test_runtime_faults.py, tests/integration/test_podman_backend.py]
+    runnable_examples: [examples/14-customization/podman_custom_extensions.py]
+  - id: observability
+    category: 15
+    status: partial
+    features: [lifecycle-events, structured-logs, metrics, tracing, audit, diagnostics, safe-correlation, redaction, bounded-event-retention]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/18-observability.md]
+    examples: examples/15-observability/README.md
+    security: docs/security/best-practices.md
+    planned_tests: [redaction, exporter-failure, slow-subscriber, cardinality]
+    implemented: [lifecycle-events, structured-logs, safe-correlation]
+    tests: [tests/unit/test_extension_points.py, tests/unit/test_runtime_faults.py, tests/integration/test_podman_backend.py]
+    runnable_examples: [examples/15-observability/podman_event_sink.py]
+  - id: frameworks
+    category: 16
+    status: proposed
+    features: [fastapi, starlette, asyncio-apps, jupyter, ml, data-processing, llm-code, background-workers]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/03-public-api-specification.md, docs/architecture/15-remote-backend-protocol.md]
+    examples: examples/16-framework-integrations/README.md
+    security: docs/security/threat-model.md
+    planned_tests: [lifespan-shutdown, client-disconnect, auth-request-limits, notebook-host-secrets]
+    tests: []
+  - id: production
+    category: 17
+    status: proposed
+    features: [multi-tenant, concurrent-service, secure-code-runner, distributed-execution, failover-application, complete-application]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/17-security-threat-model.md, docs/architecture/15-remote-backend-protocol.md]
+    examples: examples/17-production-workflows/README.md
+    security: docs/security/threat-model.md
+    planned_tests: [tenant-quotas, auth-ownership, restart-reconciliation, deployment-hardening]
+    tests: []
+  - id: failures
+    category: 18
+    status: partial
+    features: [unavailable, capability-mismatch, survived, respawned, termination-failed, verification-unknown, remote-disconnect, snapshot-corruption, checkpoint-corruption, structured-exceptions]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/11-termination-engine.md, docs/architecture/12-exception-model.md]
+    examples: examples/18-failure-scenarios/README.md
+    security: docs/security/guarantees.md
+    planned_tests: [partial-setup, observation-loss, grouped-errors, artifact-corruption]
+    implemented: [unavailable, capability-mismatch, termination-failed, verification-unknown, snapshot-corruption, structured-exceptions]
+    tests: [tests/unit/test_async_runtime.py, tests/unit/test_podman_contract.py, tests/unit/test_termination.py, tests/unit/test_runtime_faults.py, tests/unit/test_runtime_artifacts.py, tests/integration/test_podman_backend.py]
+    runnable_examples: [examples/18-failure-scenarios/podman_failures.py]
+  - id: platforms
+    category: 19
+    status: proposed
+    features: [linux-qualification, macos-limitations, windows-qualification, compatibility-matrix, parent-death, native-cleanup]
+    api: docs/architecture/03-public-api-specification.md
+    architecture: [docs/architecture/20-testing-strategy.md, docs/architecture/21-packaging-and-distribution.md]
+    examples: examples/19-platform-specific/README.md
+    security: docs/security/platform-limitations.md
+    planned_tests: [real-os-enforcement, version-privilege-matrix, skipped-evidence-reporting]
+    tests: []

@@ -1,0 +1,8 @@
+flowchart LR
+    Construct["SandboxPolicy(...)<br/>type and range checks"] --> Prepare["Backend.prepare<br/>opt-in, network, budgets"]
+    Prepare --> Required["Required capabilities<br/>must be SUPPORTED"]
+    Required --> Verify["Setup verified against<br/>inspected or kernel facts"]
+    Verify --> Ready["Ready instance"]
+    Prepare -.-> Reject["SandboxCapabilityError"]
+    Required -.-> Reject
+    Verify -.-> Reject

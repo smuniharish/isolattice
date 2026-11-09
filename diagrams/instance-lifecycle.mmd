@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> ready: Sandbox.create
+    ready --> ready: start / run / snapshot / restore
+    ready --> stopping: stop / kill / close
+    stopping --> closed: every boundary verified,<br/>session closed
+    stopping --> failed: cleanup failure<br/>or unknown state
+    closed --> [*]
+    failed --> [*]

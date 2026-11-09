@@ -1,0 +1,14 @@
+[Unit]
+Description=Rootless Podman API for UID %i in a delegated cgroup v2 subtree (Isolattice)
+Documentation=https://github.com/smuniharish/isolattice/blob/main/docs/backends/podman.md
+Requires=user-runtime-dir@%i.service
+After=user-runtime-dir@%i.service user@%i.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/isolattice-rootless-podman.sh %i
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

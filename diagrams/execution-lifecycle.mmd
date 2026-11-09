@@ -1,0 +1,9 @@
+flowchart LR
+    Start["start()"] --> Allocate["create_boundary<br/>registered"]
+    Allocate --> Launch["start_boundary"]
+    Launch --> Stream["Stream and<br/>capture output"]
+    Stream --> Exit["workload_exited<br/>exit_code"]
+    Exit --> Cleanup["terminate<br/>verified release"]
+    Cleanup --> Result["ExecutionResult"]
+    Stream -.->|timeout, cancel, stop| Cleanup
+    Cleanup -.->|deadline expired| Late["TerminationVerificationError<br/>late cleanup stays owned"]

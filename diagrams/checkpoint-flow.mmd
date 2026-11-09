@@ -1,0 +1,6 @@
+flowchart LR
+    Probe["Live CRIU probe<br/>rootful Podman"] --> Running["Running execution"]
+    Running --> Dump["ExecutionHandle.checkpoint<br/>workload keeps running"]
+    Dump --> Store["Sealed manifest<br/>in ArtifactStore"]
+    Store --> Verify["fetch and verify<br/>kind, backend, digest"]
+    Verify --> Restore["SandboxInstance.restore<br/>new execution and boundary"]

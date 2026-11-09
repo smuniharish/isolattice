@@ -1,0 +1,58 @@
+{
+  "skill_name": "isolattice",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "app.py runs report scripts that customers upload, with subprocess and shell=True. Move it to isolattice on our Linux host with rootless Podman. Reports must not reach the network, must stay under 512 MiB of memory and 2 minutes, and their output must stay bounded.",
+      "expected_output": "app.py builds a SandboxPolicy with network NONE, memory_bytes, execution_timeout and bounded stdout, requires NETWORK_ISOLATION and MEMORY_LIMIT, runs the script through PodmanBackend inside async with blocks, and passes the customer value as an argv element instead of a shell string.",
+      "files": [
+        "files/report_job/app.py"
+      ],
+      "assertions": [
+        "shell=True and string command construction are removed; the command is an argv tuple",
+        "The customer value is passed as a separate argv element, stdin or environment, never interpolated into a shell string",
+        "SandboxPolicy sets network=NetworkAccess.NONE (or keeps the default), memory_bytes of 512 MiB and execution_timeout of 120 seconds",
+        "required_capabilities contains Capability.NETWORK_ISOLATION and Capability.MEMORY_LIMIT",
+        "Sandbox and the instance are both used with async with",
+        "The code checks stdout_truncated or keeps stdout_limit bounded, and does not claim the sandbox is safe for hostile code"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our agent's code tool runs on Windows. We use WindowsJobBackend with the default SandboxPolicy and get SandboxCapabilityError right away. We also need the generated code to be isolated from the user's files. Fix it.",
+      "expected_output": "Explains that WindowsJobBackend refuses the default network NONE and read-only root because a Job Object cannot restrict either, that it is not a security boundary, and recommends WindowsAppContainerBackend for file and network isolation, with a policy that keeps network NONE and requires FILESYSTEM_ISOLATION.",
+      "files": [],
+      "assertions": [
+        "Explains that WindowsJobBackend requires network=ENABLED and read_only_root=False because it cannot enforce either",
+        "States that WindowsJobBackend is not a security boundary for files, network, registry or system services",
+        "Recommends WindowsAppContainerBackend for isolation from the user's files",
+        "Does not weaken a required capability or remove it from required_capabilities to make the error disappear"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We cancel long isolattice runs from a FastAPI endpoint. Sometimes close() raises TerminationVerificationError and our handler logs 'stopped' and moves on. Is that OK?",
+      "expected_output": "No: TerminationVerificationError means cleanup was not verified and workload processes may still run. The handler must report the failure, keep or record the instance for operator follow-up and not mark the job as stopped.",
+      "files": [],
+      "assertions": [
+        "States that TerminationVerificationError means termination or cleanup was not verified, not success",
+        "Recommends logging or alerting and keeping the instance or its identity for operator follow-up",
+        "Does not suggest suppressing the exception or treating it as a successful stop",
+        "Keeps cancellation through handle.cancel() or task cancellation with async with cleanup"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Snapshot the workspace of our isolattice Podman instance after each step and restore it into a fresh instance later. Store snapshots on our MinIO-compatible S3.",
+      "expected_output": "Uses isolattice[s3] with S3ArtifactStore (explicit endpoint, bucket, prefix and credentials from the environment), passes it as Sandbox(artifact_store=...), sets workspace=True in the policy, calls await instance.snapshot(key) after each step and restores with sandbox.create(policy=..., workspace_snapshot=key).",
+      "files": [],
+      "assertions": [
+        "Installs or requires the isolattice[s3] extra",
+        "Constructs S3ArtifactStore with credentials read from the environment or a secret store, not hard-coded",
+        "Passes the store as Sandbox(artifact_store=...)",
+        "The policy enables the workspace (workspace=True)",
+        "Snapshots use instance.snapshot(key) and restoring uses sandbox.create(workspace_snapshot=key)"
+      ]
+    }
+  ]
+}

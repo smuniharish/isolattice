@@ -1,0 +1,233 @@
+# Documentation site, built with Zensical: `uv run zensical build --strict`.
+# Preview locally with `uv run zensical serve`.
+
+[project]
+site_name = "Isolattice"
+site_description = "Async, capability-aware sandbox execution for Python with backend-specific enforcement on Linux, Windows, Podman, Docker and Kubernetes."
+site_url = "https://isolattice.readthedocs.io/en/latest/"
+site_author = "S. Muni Harish"
+repo_name = "smuniharish/isolattice"
+repo_url = "https://github.com/smuniharish/isolattice"
+edit_uri = "edit/main/docs/"
+copyright = "Copyright &copy; Isolattice contributors. Released under the Apache License 2.0."
+extra_css = ["stylesheets/extra.css"]
+
+nav = [
+  { "Home" = "index.md" },
+  { "Getting started" = [
+    "getting-started/index.md",
+    { "Installation" = "getting-started/installation.md" },
+    { "Quickstart" = "getting-started/quickstart.md" },
+  ] },
+  { "Concepts" = [
+    { "Introduction" = "concepts/introduction.md" },
+    { "Sandboxing fundamentals" = "concepts/sandboxing-fundamentals.md" },
+    { "Execution model" = "concepts/execution-model.md" },
+    { "Security model" = "concepts/security-model.md" },
+    { "Capability model" = "concepts/capability-model.md" },
+  ] },
+  { "Backends" = [
+    { "Linux namespaces" = "backends/linux.md" },
+    { "Windows" = "backends/windows.md" },
+    { "Podman" = "backends/podman.md" },
+    { "Docker API" = "backends/docker.md" },
+    { "Kubernetes" = "backends/kubernetes.md" },
+    { "macOS" = "backends/macos.md" },
+    { "Remote" = "backends/remote.md" },
+  ] },
+  { "Guides" = [
+    { "Filesystem isolation" = "guides/filesystem-isolation.md" },
+    { "Network isolation" = "guides/network-isolation.md" },
+    { "Resource limits" = "guides/resource-limits.md" },
+    { "Process management" = "guides/process-management.md" },
+    { "Timeout and cancellation" = "guides/timeout-and-cancellation.md" },
+    { "Process-tree termination" = "guides/process-tree-termination.md" },
+    { "Snapshots" = "guides/snapshots.md" },
+    { "Checkpoints" = "guides/checkpoints.md" },
+    { "Podman Desktop" = "guides/podman-desktop.md" },
+    { "Kubernetes" = "guides/kubernetes-integration.md" },
+    { "Custom backends" = "guides/custom-backend.md" },
+    { "Custom integrations" = "guides/custom-integrations.md" },
+    { "Remote execution" = "guides/remote-execution.md" },
+  ] },
+  { "Security" = [
+    { "Threat model" = "security/threat-model.md" },
+    { "Guarantees" = "security/guarantees.md" },
+    { "Platform limitations" = "security/platform-limitations.md" },
+    { "Capability enforcement" = "security/capability-enforcement.md" },
+    { "Escape prevention" = "security/process-escape-prevention.md" },
+    { "Best practices" = "security/best-practices.md" },
+  ] },
+  { "Architecture" = [
+    { "Project" = "architecture/01-project-overview.md" },
+    { "Overview" = "architecture/02-architecture-overview.md" },
+    { "Public API" = "architecture/03-public-api-specification.md" },
+    { "Domain model" = "architecture/04-domain-model.md" },
+    { "Policies" = "architecture/05-policy-model.md" },
+    { "Capabilities" = "architecture/06-capability-model.md" },
+    { "Backend contracts" = "architecture/07-backend-contracts.md" },
+    { "Resolution" = "architecture/08-backend-resolution.md" },
+    { "Lifecycle" = "architecture/09-lifecycle-state-machine.md" },
+    { "Containment" = "architecture/10-process-containment.md" },
+    { "Termination" = "architecture/11-termination-engine.md" },
+    { "Exceptions" = "architecture/12-exception-model.md" },
+    { "Snapshots" = "architecture/13-snapshot-architecture.md" },
+    { "Checkpoints" = "architecture/14-checkpoint-architecture.md" },
+    { "Remote protocol" = "architecture/15-remote-backend-protocol.md" },
+    { "Containers" = "architecture/16-container-backend-architecture.md" },
+    { "Threat model" = "architecture/17-security-threat-model.md" },
+    { "Observability" = "architecture/18-observability.md" },
+    { "Dependencies" = "architecture/19-dependency-evaluation.md" },
+    { "Testing" = "architecture/20-testing-strategy.md" },
+    { "Packaging" = "architecture/21-packaging-and-distribution.md" },
+    { "Decisions" = "architecture/22-architecture-decision-records.md" },
+  ] },
+  { "Comparisons" = [
+    { "subprocess" = "comparisons/python-subprocess-vs-isolattice.md" },
+    { "asyncio subprocess" = "comparisons/asyncio-subprocess-vs-isolattice.md" },
+    { "multiprocessing" = "comparisons/multiprocessing-vs-isolattice.md" },
+    { "Docker" = "comparisons/docker-vs-isolattice.md" },
+    { "Podman" = "comparisons/podman-vs-isolattice.md" },
+    { "Kubernetes" = "comparisons/kubernetes-vs-isolattice.md" },
+    { "Native sandboxing" = "comparisons/native-sandboxing-vs-isolattice.md" },
+    { "VMs and microVMs" = "comparisons/vm-and-microvm-vs-isolattice.md" },
+    { "Remote execution" = "comparisons/remote-execution-vs-isolattice.md" },
+  ] },
+  { "Operations" = [
+    { "Deployment" = "operations/deployment.md" },
+    { "Observability" = "operations/observability.md" },
+    { "Performance" = "operations/performance.md" },
+    { "Troubleshooting" = "operations/troubleshooting.md" },
+  ] },
+  { "Agent Skills" = [
+    "agent-skills/index.md",
+    { "isolattice" = "agent-skills/isolattice.md" },
+    { "isolattice-extend" = "agent-skills/isolattice-extend.md" },
+    { "Install in your agent" = "agent-skills/install.md" },
+    { "Evaluation" = "agent-skills/evaluation.md" },
+  ] },
+  { "API reference" = [
+    "api/index.md",
+    { "Sandbox" = "api/sandbox.md" },
+    { "Policies and models" = "api/models.md" },
+    { "Backends" = "api/backends.md" },
+    { "Backend extension" = "api/extension.md" },
+    { "Artifact storage" = "api/storage.md" },
+    { "Events" = "api/events.md" },
+    { "Errors" = "api/errors.md" },
+    { "Conformance testing" = "api/testing.md" },
+    { "Configuration" = "reference/configuration.md" },
+    { "Policies" = "reference/policies.md" },
+    { "Capabilities" = "reference/capabilities.md" },
+    { "Event kinds" = "reference/events.md" },
+  ] },
+  { "Project" = [
+    { "Changelog" = "changelog.md" },
+    { "Contributing" = "development/contributing.md" },
+    { "Testing" = "development/testing.md" },
+    { "Examples" = "development/examples.md" },
+    { "Feature coverage" = "development/feature-coverage.md" },
+    { "Architecture review" = "development/architecture-review.md" },
+    { "Contributor skills" = "development/agent-skills.md" },
+  ] },
+]
+
+# `zensical build --strict` fails on any of these.
+[project.validation]
+invalid_links = true
+invalid_link_anchors = true
+unresolved_references = true
+unresolved_footnotes = true
+unused_definitions = true
+unused_footnotes = true
+shadowed_definitions = true
+shadowed_footnotes = true
+
+[project.theme]
+font = false
+logo = "assets/logo.svg"
+favicon = "assets/logo.svg"
+icon.repo = "fontawesome/brands/github"
+features = [
+  "content.action.edit",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.tabs.link",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.sections",
+  "navigation.tabs",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "search.share",
+  "search.suggest",
+  "toc.follow",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "teal"
+accent = "teal"
+toggle.icon = "material/weather-night"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "teal"
+accent = "teal"
+toggle.icon = "material/weather-sunny"
+toggle.name = "Switch to light mode"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/smuniharish/isolattice"
+name = "Isolattice on GitHub"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/isolattice/"
+name = "Isolattice on PyPI"
+
+# Click a diagram to open it full size, with zoom.
+[project.plugins.glightbox]
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+show_source = false
+show_root_heading = true
+show_root_full_path = false
+show_symbol_type_heading = true
+merge_init_into_class = true
+separate_signature = true
+show_signature_annotations = true
+signature_crossrefs = true
+members_order = "source"
+heading_level = 3
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.betterem = {}
+pymdownx.details = {}
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.highlight.anchor_linenums = true
+pymdownx.inlinehilite = {}
+pymdownx.keys = {}
+pymdownx.snippets.base_path = ["."]
+pymdownx.snippets.check_paths = true
+pymdownx.superfences = {}
+pymdownx.tabbed.alternate_style = true

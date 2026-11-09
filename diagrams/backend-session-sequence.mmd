@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant Runtime
+    participant Backend
+    participant Session as BackendSession
+    Runtime->>Backend: prepare(policy, sandbox_id)
+    Backend-->>Runtime: session (or SandboxCapabilityError)
+    Runtime->>Session: create_boundary(request, ids, register)
+    Session-->>Runtime: register(boundary), then return it
+    Runtime->>Session: start_boundary(boundary, request)
+    Session-->>Runtime: client process with pipes
+    Note over Runtime: drain stdout/stderr, write stdin
+    Runtime->>Session: workload_exited(boundary)
+    Runtime->>Session: exit_code(boundary, client code)
+    Runtime->>Session: terminate(boundary, policy, force)
+    Session-->>Runtime: TerminationReport
+    Runtime->>Session: close() once, after all boundaries
