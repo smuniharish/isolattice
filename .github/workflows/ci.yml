@@ -676,28 +676,7 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
-      - name: Install Python 3.14 under Program Files for AppContainer
-        id: runtime
-        shell: pwsh
-        run: |
-          $python = "${{ steps.python.outputs.python-path }}"
-          if ("${{ matrix.python-version }}" -eq "3.14") {
-            $version = (& $python -c "import platform; print(platform.python_version())").Trim()
-            $parts = $version.Split(".")
-            $target = Join-Path $env:ProgramFiles "Python$($parts[0])$($parts[1])"
-            $source = Split-Path $python -Parent
-            New-Item -ItemType Directory -Path $target -Force | Out-Null
-            Copy-Item -Path (Join-Path $source "*") -Destination $target -Recurse -Force
-            $python = Join-Path $target "python.exe"
-            $installed = (& $python -c "import platform; print(platform.python_version())").Trim()
-            if ($installed -ne $version) { throw "Expected Python $version, installed $installed" }
-            $prefix = (& $python -c "import sys; print(sys.base_prefix)").Trim()
-            if (-not $prefix.StartsWith($target, [StringComparison]::OrdinalIgnoreCase)) {
-              throw "Python resolved its base prefix outside Program Files: $prefix"
-            }
-          }
-          "python-path=$python" >> $env:GITHUB_OUTPUT
-      - run: uv sync --locked --all-extras --all-groups --python "${{ steps.runtime.outputs.python-path }}"
+      - run: uv sync --locked --all-extras --all-groups --python "${{ steps.python.outputs.python-path }}"
       - name: Run every Job Object and restricted-token case
         shell: pwsh
         run: |
@@ -711,13 +690,10 @@ jobs:
           uv run --no-sync python scripts/check_live_skips.py $report --allow-reason "User Account Control may be disabled" --allow-reason "could not initialize a low-integrity process"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Let AppContainers read the base interpreter
-        if: matrix.python-version == '3.12'
         shell: pwsh
         run: |
           $base = uv run --no-sync python -c "import sys; print(sys.base_prefix)"
-          Write-Output "Granting AppContainer read access to $base"
-          # Python 3.12 uses the hosted tool cache; Python 3.14 is copied under Program Files.
-          # ALL APPLICATION PACKAGES and ALL RESTRICTED APPLICATION PACKAGES.
+          # ALL APPLICATION PACKAGES and ALL RESTRICTED APPLICATION PACKAGES need read access.
           icacls $base /grant "*S-1-15-2-1:(OI)(CI)RX" "*S-1-15-2-2:(OI)(CI)RX" /Q
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $parent = Split-Path $base -Parent

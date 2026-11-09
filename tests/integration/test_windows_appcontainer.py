@@ -83,6 +83,21 @@ def python(code: str, **options: Any) -> ExecutionRequest:
     return ExecutionRequest(argv=(PYTHON, "-I", "-c", code), **options)
 
 
+def workload_output(data: bytes) -> bytes:
+    """Ignore only CPython's interpreter-path notice from AppContainer startup."""
+    warning = f"Failed to find real location of {PYTHON}\n".encode()
+    return data.removeprefix(warning)
+
+
+def test_workload_output_strips_only_the_interpreter_warning() -> None:
+    warning = f"Failed to find real location of {PYTHON}\n".encode()
+
+    assert workload_output(warning + b"payload") == b"payload"
+    assert workload_output(warning.replace(b"python.exe", b"other.exe") + b"payload") == (
+        warning.replace(b"python.exe", b"other.exe") + b"payload"
+    )
+
+
 def exited(pid: int) -> bool:
     if sys.platform == "win32":
         import ctypes
@@ -199,7 +214,7 @@ def test_io_environment_and_working_directory(interpreter: str) -> None:
     finally:
         del os.environ["ISOLATTICE_HOST_ONLY"]
     assert result.exit_code == 3
-    assert result.stderr == b"warn"
+    assert workload_output(result.stderr) == b"warn"
     data, cwd, environment = json.loads(result.stdout)
     assert data == "input"
     assert Path(cwd).name.startswith("x-")
@@ -497,7 +512,7 @@ def test_descendants_breakaway_timeout_and_cancel(interpreter: str) -> None:
             assert tree.exit_code == 0
             assert tree.termination.resources_released
             assert any("outlived the root" in note for note in tree.termination.notes)
-            assert wait_exited(int(tree.stdout.strip()))
+            assert wait_exited(int(workload_output(tree.stdout).strip()))
 
             denied = await instance.run(python(breakaway))
             assert denied.stdout.startswith(b"DENIED"), denied
@@ -511,11 +526,15 @@ def test_descendants_breakaway_timeout_and_cancel(interpreter: str) -> None:
             handle = await instance.start(python(SPAWN_TREE + "import time; time.sleep(60)"))
             output = handle.output()
             first = await anext(output)
+            first_data = workload_output(first.data)
+            while not first_data:
+                first = await anext(output)
+                first_data = workload_output(first.data)
             cancelled = await handle.cancel(force=True)
             await output.aclose()
             assert cancelled is not None
             assert cancelled.resources_released
-            assert wait_exited(int(first.data.strip()))
+            assert wait_exited(int(first_data.strip()))
 
     asyncio.run(check())
 
@@ -535,8 +554,11 @@ def test_parent_crash_kills_the_tree(interpreter: str, tmp_path: Path) -> None:
         "    handle = await instance.start(ExecutionRequest(argv=(sys.argv[2], '-I', '-c', "
         "sys.argv[3])))\n"
         "    async for chunk in handle.output():\n"
-        "        print(chunk.data.decode().strip(), flush=True)\n"
-        "        os._exit(9)\n"
+        "        warning = f'Failed to find real location of {sys.argv[2]}\\n'.encode()\n"
+        "        data = chunk.data.removeprefix(warning)\n"
+        "        if data:\n"
+        "            print(data.decode().strip(), flush=True)\n"
+        "            os._exit(9)\n"
         "asyncio.run(main())\n"
     )
     before = profiles()
@@ -548,7 +570,7 @@ def test_parent_crash_kills_the_tree(interpreter: str, tmp_path: Path) -> None:
         check=False,
     )
     assert completed.returncode == 9, completed
-    assert wait_exited(int(completed.stdout.strip()))
+    assert wait_exited(int(workload_output(completed.stdout).strip()))
 
     from isolattice.backends.windows_appcontainer import _delete_profile, _scratch_tree
 
