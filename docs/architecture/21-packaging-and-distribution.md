@@ -44,8 +44,10 @@ and `dev`, the default), not in extras, so they never reach users.
 The pure-Python wheel installs on Linux, Windows and macOS. Backend availability
 depends on the host: the Linux and Windows backends need their operating system, and
 container backends need a reachable engine or cluster. On macOS only the container
-backends are usable; a native macOS backend is proposed. CI runs the unit suite on
-Linux, Windows and macOS with Python 3.12 and 3.14.
+backends are usable; a native macOS backend is proposed. CI runs the core suite on
+every GitHub-hosted Linux, Windows and macOS image with Python 3.12 to 3.15, and on
+other Linux distributions and the BSDs; see
+[tested platforms](../reference/tested-platforms.md).
 
 ## Release
 

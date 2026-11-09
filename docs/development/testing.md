@@ -73,7 +73,9 @@ AppContainer tests, on these platforms:
 | BSD | FreeBSD, OpenBSD and NetBSD virtual machines | the system Python package |
 
 macOS and the BSDs run the core runtime, artifact stores and backend contracts.
-They have no native backend; use a container or Kubernetes backend there.
+They have no native backend; use a container or Kubernetes backend there. The
+[tested platforms](../reference/tested-platforms.md) page lists every CI job,
+including the live backend jobs.
 
 ## Live suites
 

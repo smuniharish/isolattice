@@ -61,13 +61,15 @@ gone afterwards, is not.
 
 | Backend | Boundary | Status |
 | --- | --- | --- |
-| [Podman](backends/podman.md) | One container per execution, rootless by default | Implemented; verified live on Podman 6.1.4, rootless and rootful |
+| [Podman](backends/podman.md) | One container per execution, rootless by default | Implemented; verified live in CI (rootless, rootful with CRIU, remote over `ssh://`) and on Podman 6.1.4 locally |
 | [Docker API](backends/docker.md) | One container per execution through the Docker Engine API | Implemented; verified live on Docker Engine 29.9.3 and Podman's Docker-compatible API |
 | [Kubernetes](backends/kubernetes.md) | One Pod per execution | Implemented; verified live on kind |
-| [Linux namespaces](backends/linux.md) | User, PID, mount, network, IPC and UTS namespaces with a delegated cgroup | Implemented; verified live in WSL2 Ubuntu 24.04 |
-| [Windows](backends/windows.md) | AppContainer token with a Job Object, or a Job Object alone | Implemented; verified live on Windows 11 |
-| [macOS](backends/macos.md) | Seatbelt evaluation only | Proposed |
-| [Remote](backends/remote.md) | Remote execution service | Proposed |
+| [Linux namespaces](backends/linux.md) | User, PID, mount, network, IPC and UTS namespaces with a delegated cgroup | Implemented; verified live in CI on Ubuntu 24.04 and in WSL2 Ubuntu 24.04 |
+| [Windows](backends/windows.md) | AppContainer token with a Job Object, or a Job Object alone | Implemented; verified live in CI on Windows Server and on Windows 11 |
+| [macOS](backends/macos.md) | Tested host using the container backends | Core suite tested in CI; native Seatbelt backend proposed |
+| [Remote](backends/remote.md) | Remote engines through Podman, Docker or Kubernetes connections | Remote engines supported, with Podman over `ssh://` tested in CI; Isolattice remote service proposed |
+
+See [tested platforms](reference/tested-platforms.md) for every CI job.
 
 ## A first look
 

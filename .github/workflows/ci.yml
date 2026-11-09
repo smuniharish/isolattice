@@ -427,6 +427,87 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+  live-podman-ssh:
+    name: Live Podman over SSH (remote engine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COVERAGE_FILE: .coverage.live-podman-ssh
+      ISOLATTICE_TEST_PODMAN_CONNECTION: isolattice-ci-ssh
+      ISOLATTICE_TEST_PODMAN_IMAGE: docker.io/library/alpine:3.22
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - name: Install Python tools, Podman and an SSH server
+        run: |
+          uv sync --locked --all-extras --all-groups
+          sudo apt-get update
+          sudo apt-get install --yes podman openssh-server
+      - name: Reach a Podman engine only through an ssh:// connection and run the live cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          socket="$XDG_RUNTIME_DIR/podman/isolattice.sock"
+          service_pid=""
+          cleanup() {
+            status=$?
+            trap - EXIT
+            if [ "$status" -ne 0 ] && [ -f "$RUNNER_TEMP/isolattice-ssh.log" ]; then
+              cat "$RUNNER_TEMP/isolattice-ssh.log"
+            fi
+            if [ -n "$service_pid" ] && kill -0 "$service_pid" 2>/dev/null; then
+              kill "$service_pid"
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          # A dedicated key and pinned host key: the client talks to the engine like a remote host.
+          ssh-keygen -q -t ed25519 -N "" -f ~/.ssh/isolattice
+          cat ~/.ssh/isolattice.pub >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+          sudo systemctl start ssh
+          ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts
+          mkdir -p "$(dirname "$socket")"
+          podman system service --time=0 "unix://$socket" >"$RUNNER_TEMP/isolattice-ssh.log" 2>&1 &
+          service_pid=$!
+          for attempt in $(seq 1 60); do
+            if [ -S "$socket" ]; then break; fi
+            sleep 1
+          done
+          test -S "$socket"
+          podman pull "$ISOLATTICE_TEST_PODMAN_IMAGE"
+          podman system connection add --identity ~/.ssh/isolattice \
+            "$ISOLATTICE_TEST_PODMAN_CONNECTION" "ssh://$USER@127.0.0.1:22$socket"
+          podman --connection "$ISOLATTICE_TEST_PODMAN_CONNECTION" info --format '{{.Host.RemoteSocket.Path}}'
+          report="$RUNNER_TEMP/isolattice-ssh.xml"
+          # Checkpoints need a root client; the live-podman job covers them and the other profiles.
+          uv run --no-sync pytest -m podman \
+            -k "not (checkpoint_restores or foreign_archive or 13-checkpoints)" \
+            $COVERAGE_ARGS --junitxml="$report"
+          uv run --no-sync python scripts/check_live_skips.py "$report" \
+            --allow-reason ISOLATTICE_TEST_PODMAN_RESOURCE_CONNECTION \
+            --allow-reason ISOLATTICE_TEST_PODMAN_ROOTFUL_CONNECTION \
+            --allow-reason ISOLATTICE_TEST_S3_
+          for kind in "ps -a" "pod ps" "volume ls" "image ls"; do
+            remaining="$(podman --connection "$ISOLATTICE_TEST_PODMAN_CONNECTION" $kind \
+              --filter label=io.isolattice.sandbox --quiet)"
+            if [ -n "$remaining" ]; then
+              printf 'Owned %s resources remain:\n%s\n' "$kind" "$remaining"
+              exit 1
+            fi
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-live-podman-ssh
+          path: ${{ env.COVERAGE_FILE }}
+          include-hidden-files: true
+          if-no-files-found: error
+
   live-docker:
     name: Live Docker Engine
     runs-on: ubuntu-latest
@@ -612,16 +693,24 @@ jobs:
         shell: pwsh
         run: |
           $base = uv run --no-sync python -c "import sys; print(sys.base_prefix)"
-          # ALL APPLICATION PACKAGES and ALL RESTRICTED APPLICATION PACKAGES, as under Program Files.
-          icacls $base /grant "*S-1-15-2-1:(OI)(CI)RX" "*S-1-15-2-2:(OI)(CI)RX" /Q
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          # getpath resolves the real interpreter path, which needs each ancestor readable.
-          $parent = Split-Path $base -Parent
-          while ($parent -and (Split-Path $parent -Parent)) {
-            icacls $parent /grant "*S-1-15-2-1:RX" "*S-1-15-2-2:RX" /Q
+          # Python 3.14 resolves the interpreter's real path at startup, and the tool cache
+          # can sit behind a link, so both the linked and the resolved trees are granted.
+          $real = uv run --no-sync python -c "import os, sys; print(os.path.realpath(sys.base_prefix))"
+          foreach ($tree in @($base, $real) | Select-Object -Unique) {
+            Write-Output "Granting AppContainer read access to $tree"
+            # ALL APPLICATION PACKAGES and ALL RESTRICTED APPLICATION PACKAGES, as under Program Files.
+            icacls $tree /grant "*S-1-15-2-1:(OI)(CI)RX" "*S-1-15-2-2:(OI)(CI)RX" /Q
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            $parent = Split-Path $parent -Parent
+            # getpath resolves the real interpreter path, which needs each ancestor readable.
+            $parent = Split-Path $tree -Parent
+            while ($parent -and (Split-Path $parent -Parent)) {
+              icacls $parent /grant "*S-1-15-2-1:RX" "*S-1-15-2-2:RX" /Q
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              $parent = Split-Path $parent -Parent
+            }
           }
+          Get-Item $base, (Split-Path $base -Parent), "C:\hostedtoolcache" -ErrorAction SilentlyContinue |
+            Format-Table FullName, LinkType, Target -AutoSize
       - name: Run every AppContainer case
         shell: pwsh
         run: |
@@ -641,7 +730,7 @@ jobs:
 
   coverage:
     name: Combined coverage
-    needs: [test, live-podman, live-docker, live-kubernetes, live-linux, live-windows]
+    needs: [test, live-podman, live-podman-ssh, live-docker, live-kubernetes, live-linux, live-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

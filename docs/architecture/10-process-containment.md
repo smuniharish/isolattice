@@ -19,8 +19,8 @@ is verified empty and released.
 | Windows AppContainer | An execution Job Object nested in the instance job | Created inside the AppContainer and both jobs by one `CreateProcessW` call in a launcher |
 | Podman, Docker API | A container ID labelled `io.isolattice.sandbox` | Engine inspection by ID; the container's PID namespace and cgroup hold the tree |
 | Kubernetes | A Pod name with its UID | UID-preconditioned deletion; the API server must report the Pod gone |
-| macOS | Proposed | No backend; Seatbelt alone has no process-tree boundary |
-| Remote | Proposed | No backend |
+| Native macOS | Proposed | No backend; Seatbelt alone has no process-tree boundary. macOS hosts use the container backends |
+| Isolattice remote service | Proposed | No backend. Remote Podman, Docker and Kubernetes engines use the rows above |
 
 ## Launch
 

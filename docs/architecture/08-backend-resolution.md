@@ -34,8 +34,8 @@ application.
 | Podman, rootless or rootful | `PodmanBackend` |
 | Docker Engine API | `DockerBackend` |
 | Kubernetes namespace | `KubernetesBackend` |
-| macOS | Proposed; no backend |
-| Remote endpoint | Proposed; no backend |
+| macOS host | `PodmanBackend` (Podman machine or remote engine), `DockerBackend` or `KubernetesBackend`; native backend proposed |
+| Remote engine | `PodmanBackend` over an `ssh://` connection, `DockerBackend` with a remote host, or `KubernetesBackend`; Isolattice remote service proposed |
 
 ## Rootful engines
 

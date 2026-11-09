@@ -82,9 +82,10 @@ Notes:
 
 Per-backend evidence details are on the [Linux](../backends/linux.md),
 [Windows](../backends/windows.md), [Podman](../backends/podman.md),
-[Docker](../backends/docker.md) and [Kubernetes](../backends/kubernetes.md) pages. The
-[macOS](../backends/macos.md) and [remote](../backends/remote.md) backends are proposed
-and not implemented.
+[Docker](../backends/docker.md) and [Kubernetes](../backends/kubernetes.md) pages. On
+[macOS](../backends/macos.md) and against [remote engines](../backends/remote.md), use
+those container backends; a native macOS backend and an Isolattice remote service are
+proposed and not implemented.
 
 ## Example
 

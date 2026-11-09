@@ -1,9 +1,10 @@
 # Remote execution
 
-!!! warning "Proposed: not implemented"
-    Remote execution is a **proposed** design. Isolattice has no remote backend, no
-    remote protocol client or server, and no scheduler. Nothing on this page can be
-    used today.
+!!! note "Remote engines are supported; the Isolattice remote service is proposed"
+    Podman, Docker and Kubernetes backends can drive an engine or cluster on another
+    machine today, and CI tests the Podman `ssh://` path on every push. A dedicated
+    Isolattice remote service, with leases, failover and orphan reconciliation, is a
+    **proposed** design with no implementation.
 
 ## What exists today
 
@@ -12,16 +13,17 @@ the Python process reaches directly:
 
 - The Linux namespace and Windows backends run on the same host as your code.
 - `PodmanBackend`, `DockerBackend` and `KubernetesBackend` drive an engine client
-  (`podman`, `docker`, `kubectl`). That client can already talk to an engine on
-  another machine through its own connection mechanism: a Podman connection, a Docker
-  host URL or a kubeconfig context. The Isolattice runtime, its termination
-  verification and its artifact staging stay on the client host.
+  (`podman`, `docker`, `kubectl`). That client can talk to an engine on
+  another machine through its own connection mechanism: a Podman `ssh://`
+  connection, a Docker host URL or a kubeconfig context. The Isolattice runtime,
+  its termination verification and its artifact staging stay on the client host.
+  See the [remote engines](../backends/remote.md) page.
 
 These backends share the host or node kernel, so kernel, engine and cluster
 exploits are out of scope wherever the engine runs.
 
-Using an engine connection to a remote host is not "remote execution" in the proposed
-sense. There are no leases, no endpoint failover and no orphan reconciliation across
+Using an engine connection to a remote host is not the proposed Isolattice remote
+service. There are no leases, no endpoint failover and no orphan reconciliation across
 hosts; if the client host disappears, cleanup depends on the engine (for example the
 Kubernetes `activeDeadlineSeconds` backstop) and operator reconciliation by label.
 

@@ -93,5 +93,7 @@ See the [Windows backends](../backends/windows.md).
 
 ## Not implemented
 
-- **macOS:** no backend; Seatbelt is being evaluated. See [macOS](../backends/macos.md).
-- **Remote execution:** proposed only. See [remote](../backends/remote.md).
+- **Native macOS backend:** none; Seatbelt is being evaluated. macOS hosts use the
+  container backends. See [macOS](../backends/macos.md).
+- **Isolattice remote service:** proposed only. Remote engines through Podman, Docker
+  or Kubernetes connections are supported. See [remote](../backends/remote.md).

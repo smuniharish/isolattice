@@ -8,7 +8,9 @@ integrity and error composition. Backends own enforcement and boundary observati
 
 ![Layered architecture: public API, policy, explicit backend, runtime, verified termination and events](../assets/diagrams/architecture-overview.png)
 
-The macOS and remote backends are proposed and not implemented; they appear dashed.
+Podman connections may point at a local socket or a remote engine over `ssh://`. A
+native macOS sandbox backend and an Isolattice remote service protocol are proposed
+and not implemented; they appear dashed. macOS hosts use the container backends.
 
 ## Modules
 

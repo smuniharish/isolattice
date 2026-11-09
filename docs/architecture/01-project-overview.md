@@ -32,8 +32,10 @@ cannot enforce.
 | CRIU execution checkpoints and restore | Implemented: rootful Podman only |
 | Whole-container snapshots | Implemented: Podman |
 | Artifact stores (local, S3), event sinks, command runners | Implemented |
-| macOS backend | Proposed; Seatbelt evaluation only |
-| Remote backend and remote execution protocol | Proposed |
+| macOS hosts through the container backends | Implemented; core suite tested in CI |
+| Remote engines through Podman `ssh://`, Docker hosts or kubeconfig contexts | Implemented; Podman over SSH tested in CI |
+| Native macOS backend | Proposed; Seatbelt evaluation only |
+| Isolattice remote service and remote execution protocol | Proposed |
 | Framework integrations | Proposed |
 | OpenTelemetry and metrics exporters | Proposed; write an `EventSink` today |
 

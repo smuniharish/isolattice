@@ -119,6 +119,7 @@ nav = [
     { "Configuration" = "reference/configuration.md" },
     { "Policies" = "reference/policies.md" },
     { "Capabilities" = "reference/capabilities.md" },
+    { "Tested platforms" = "reference/tested-platforms.md" },
     { "Event kinds" = "reference/events.md" },
   ] },
   { "Project" = [

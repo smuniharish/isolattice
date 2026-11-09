@@ -96,14 +96,24 @@ guarantees each one does and doesn't give you.
 
 | Backend | Boundary | Live-tested on |
 | --- | --- | --- |
-| `PodmanBackend` | One restricted container per execution; rootless by default | Podman machine, rootless and rootful |
-| `DockerBackend` | One restricted container per execution through the Docker Engine API | Podman's Docker-compatible API |
-| `KubernetesBackend` | One owned Pod per execution in an explicit namespace; no network isolation | Single-node kind cluster |
-| `LinuxNamespaceBackend` | User, PID, mount, network, IPC and UTS namespaces, delegated cgroup v2, seccomp and Landlock | WSL 2 with a delegated systemd scope |
-| `WindowsAppContainerBackend` | Less-privileged AppContainer inside nested Job Objects; no network | Windows 11 |
-| `WindowsJobBackend` | Job Object containment and budgets. **Not a security boundary:** files, network and registry stay reachable | Windows 11 |
+| `PodmanBackend` | One restricted container per execution; rootless by default | CI on Ubuntu: rootless, rootful runc with CRIU, and a remote engine over `ssh://`. Locally: Podman machine on Windows 11 |
+| `DockerBackend` | One restricted container per execution through the Docker Engine API | CI: Docker Engine on Ubuntu. Locally: Podman's Docker-compatible API |
+| `KubernetesBackend` | One owned Pod per execution in an explicit namespace; no network isolation | Single-node kind cluster, in CI and locally |
+| `LinuxNamespaceBackend` | User, PID, mount, network, IPC and UTS namespaces, delegated cgroup v2, seccomp and Landlock | CI on Ubuntu 24.04 and WSL 2, each with a delegated systemd scope |
+| `WindowsAppContainerBackend` | Less-privileged AppContainer inside nested Job Objects; no network | CI on Windows Server, and Windows 11 |
+| `WindowsJobBackend` | Job Object containment and budgets. **Not a security boundary:** files, network and registry stay reachable | CI on Windows Server, and Windows 11 |
 
-A macOS backend and remote execution are proposed and not implemented. The
+**macOS** is a tested host: CI runs the full core suite on macOS 15 and 26 (Apple
+silicon and Intel). Workloads on a Mac run through a container backend, against
+a Podman machine or a remote engine. A native macOS sandbox backend (Seatbelt)
+is proposed and not implemented.
+
+**Remote engines** are supported: a Podman `ssh://` connection, a remote Docker
+host or a kubeconfig context. The SSH path is live-tested in CI. A dedicated
+Isolattice remote service, with leases and failover, is proposed.
+
+The [tested platforms](https://isolattice.readthedocs.io/en/latest/reference/tested-platforms/)
+page lists every CI job and what it verifies. The
 [platform limitations](https://isolattice.readthedocs.io/en/latest/security/platform-limitations/)
 page lists what each backend doesn't enforce.
 

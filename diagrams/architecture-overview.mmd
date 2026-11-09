@@ -12,14 +12,14 @@ flowchart TD
     end
     subgraph Containers["Container backends"]
         direction TB
-        Podman["Podman"]
+        Podman["Podman<br/>local socket or<br/>remote ssh:// engine"]
         Docker["Docker API"]
-        K8s["Kubernetes"]
+        K8s["Kubernetes API"]
     end
     subgraph Proposed["Proposed (not implemented)"]
         direction TB
-        MacOS["macOS"]
-        Remote["Remote"]
+        MacOS["Native macOS<br/>sandbox backend"]
+        Remote["Isolattice remote<br/>service protocol"]
     end
     Native --> Runtime["Runtime<br/>executions, snapshots,<br/>checkpoints"]
     Containers --> Runtime

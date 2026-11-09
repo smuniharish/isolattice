@@ -7,7 +7,7 @@
   "configChecksum": "368285a037f89a1d8f942f9075a7fd19bdc3a15992cdd1290df4df5a7996fdf8",
   "sources": {
     "adr-lifecycle.mmd": "0911256b2ae60baaf32eee4645cf7895d125b2461b2be77ae1ed616f76d98f3a",
-    "architecture-overview.mmd": "5fe61b41cc20138b517554fe48e12c4d4b16e803d9b52f9cdb2fb4a881d793c1",
+    "architecture-overview.mmd": "27b5fc882d092418bb3bafb5d98e9dc17de3c52e6eb7ebd6c117a0798e043c7d",
     "backend-selection.mmd": "5f14bbd62947d07c162ab1a5ab61901c265504d7c543bd3cf714b52baaec6100",
     "backend-session-sequence.mmd": "8b96fef597bd800405b2cbb3a5a8b48593a4a0d00d39cefe24f930c88a816c0f",
     "capability-discovery.mmd": "b1b647f4b083131dc2b4132b1d926673ca65a4c049f8fe0ff34557cdab6dd794",
