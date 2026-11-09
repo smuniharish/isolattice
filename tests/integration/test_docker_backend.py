@@ -208,7 +208,6 @@ def test_scratch_inode_count_is_capped(docker_config: DockerConfig) -> None:
         policy = SandboxPolicy(
             scratch_bytes=1024 * 1024,
             scratch_inodes=16,
-            required_capabilities=(Capability.DISK_LIMIT,),
             execution_timeout=120,
             termination=fast_termination(),
         )
