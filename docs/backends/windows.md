@@ -85,7 +85,8 @@ asyncio.run(main())
 ```
 
 The environment contains only `SYSTEMROOT`, `LOCALAPPDATA` and explicit values;
-Windows points `TEMP` and `TMP` at the profile. `cwd` `/workspace` addresses the
+Windows points `TEMP` and `TMP` at the profile (and, on Windows on ARM, adds
+`PROCESSOR_ARCHITECTURE`). `cwd` `/workspace` addresses the
 workspace directory. `SandboxInstance.snapshot(key)` and
 `Sandbox.create(workspace_snapshot=key)` save and restore the workspace.
 
@@ -176,7 +177,9 @@ asyncio.run(main())
 ```
 
 `argv[0]` must be an absolute Windows path with a drive; there is no search-path
-resolution. Only `SYSTEMROOT` and explicit environment values are passed. For Python
+resolution. Only `SYSTEMROOT` and explicit environment values are passed; on Windows
+on ARM the operating system itself also adds `PROCESSOR_ARCHITECTURE` to every new
+process. For Python
 workloads use the base interpreter (`Path(sys.base_prefix) / "python.exe"`); a
 virtual-environment `python.exe` launches an extra process that counts against
 `process_limit`.
@@ -193,7 +196,8 @@ removed, `BUILTIN\Administrators` deny-only and low mandatory integrity. It cann
 write medium-integrity files or registry keys or open the user's processes for write
 access. It can still read everything the user can, write low-integrity locations, use
 the network and ask system services to act for it. Discovery launches a probe and
-reports the backend unavailable if the probe does not run at low integrity.
+reports the backend unavailable if the probe does not run at low integrity or can
+open the calling process for termination.
 
 ### Job Object capabilities
 

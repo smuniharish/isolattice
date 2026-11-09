@@ -24,11 +24,20 @@ def test_reports_only_unexpected_skips() -> None:
     assert unexpected_skips(report, ["test_rootless_only", "test_examples"]) == []
 
 
+def test_allow_reason_matches_only_that_skip_message() -> None:
+    report = ElementTree.fromstring(REPORT)  # noqa: S314 - fixed test literal
+    assert unexpected_skips(report, ["test_rootless_only"], ["missing profile"]) == []
+    assert unexpected_skips(report, [], ["is rootful"]) == [
+        "tests.integration.test_b::test_examples[podman-x.py]"
+    ]
+
+
 def test_main_fails_on_unexpected_skip_or_empty_run(tmp_path: Path) -> None:
     path = tmp_path / "report.xml"
     path.write_text(REPORT, encoding="utf-8")
     assert main([str(path), "--allow", "test_rootless_only"]) == 1
     assert main([str(path), "--allow", "test_rootless_only", "--allow", "test_examples"]) == 0
+    assert main([str(path), "--allow-reason", "rootful", "--allow-reason", "profile"]) == 0
     path.write_text(
         '<testsuite><testcase name="test_a"><skipped/></testcase></testsuite>', encoding="utf-8"
     )

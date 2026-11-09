@@ -199,7 +199,7 @@ jobs:
             -e UV_PYTHON_PREFERENCE=only-managed \
             -v "$RUNNER_TEMP/uv/uv:/usr/local/bin/uv:ro" \
             -v "$GITHUB_WORKSPACE:/src" -w /src "$IMAGE" \
-            sh -c 'mkdir -p "$HOME" && uv sync --locked --all-extras --all-groups && uv run --no-sync pytest'
+            sh -c 'mkdir -p "$HOME" && uv sync --locked --all-extras --no-default-groups --group test && uv run --no-sync pytest'
 
   bsd:
     name: Test on ${{ matrix.os }}
@@ -211,16 +211,16 @@ jobs:
           - os: FreeBSD
             action: freebsd
             python: python3.12
-            packages: pkg install -y python312 py312-sqlite3 py312-pip py312-aiohttp py312-wrapt
+            packages: pkg install -y python312 py312-sqlite3 py312-pip py312-aiohttp py312-wrapt py312-hypothesis
           - os: OpenBSD
             action: openbsd
             python: python3
-            packages: pkg_add -I python%3 py3-pip py3-aiohttp py3-wrapt
+            packages: pkg_add -I python%3 py3-pip py3-aiohttp py3-wrapt py3-hypothesis
           - os: NetBSD
             action: netbsd
             python: python3.12
             # pkgsrc builds the sqlite3 module into python312.
-            packages: /usr/sbin/pkg_add pkgin && pkgin -y install python312 py312-pip py312-aiohttp py312-wrapt
+            packages: /usr/sbin/pkg_add pkgin && pkgin -y install python312 py312-pip py312-aiohttp py312-wrapt py312-hypothesis
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -231,14 +231,17 @@ jobs:
           PACKAGES: ${{ matrix.packages }}
         # uv and uv_build publish no BSD binaries, so the suite runs from the source tree
         # (pytest adds src to the path) with native wheels taken from the OS packages.
+        # Hypothesis publishes no BSD wheels and its sdist needs Rust, so it comes from
+        # the OS package too.
         run: |
           cat > "$GITHUB_WORKSPACE/.bsd-test.sh" <<EOF
           set -eux
           $PACKAGES
           $PYTHON -m venv --system-site-packages --without-pip /tmp/venv
           /tmp/venv/bin/python -m pip install --upgrade pip
-          /tmp/venv/bin/python -c 'import sqlite3, tomllib; print("\n".join(tomllib.load(open("pyproject.toml", "rb"))["project"]["optional-dependencies"]["s3"]))' > /tmp/s3.txt
-          /tmp/venv/bin/python -m pip install --group test -r /tmp/s3.txt
+          /tmp/venv/bin/python -c 'import sqlite3, tomllib; p = tomllib.load(open("pyproject.toml", "rb")); print("\n".join([r for r in p["dependency-groups"]["test"] if not r.startswith("hypothesis")] + p["project"]["optional-dependencies"]["s3"]))' > /tmp/requirements.txt
+          /tmp/venv/bin/python -m pip install -r /tmp/requirements.txt
+          /tmp/venv/bin/python -c 'import hypothesis; print("hypothesis", hypothesis.__version__)'
           HYPOTHESIS_PROFILE=ci /tmp/venv/bin/python -m pytest -p no:cacheprovider
           EOF
       - if: matrix.action == 'freebsd'
@@ -365,10 +368,23 @@ jobs:
             sleep 1
           done
           report="$RUNNER_TEMP/isolattice-live.xml"
-          uv run --no-sync pytest -m "podman or s3" $COVERAGE_ARGS --junitxml="$report"
+          # Podman's Linux client checkpoints only as root, so a root client runs those cases.
+          checkpoint_cases="checkpoint_restores or foreign_archive or 13-checkpoints"
+          uv run --no-sync pytest -m "podman or s3" -k "not ($checkpoint_cases)" $COVERAGE_ARGS \
+            --junitxml="$report"
           # The only resource connection is rootful, so the rootless-only budget check skips.
           uv run --no-sync python scripts/check_live_skips.py "$report" \
             --allow test_rootless_instance_budget_is_rejected
+          sudo env HOME=/root podman system connection add \
+            "$ISOLATTICE_TEST_PODMAN_ROOTFUL_CONNECTION" "unix://$resource_socket"
+          checkpoints="$RUNNER_TEMP/isolattice-checkpoints.xml"
+          sudo env "PATH=$PATH" HOME=/root "COVERAGE_FILE=$COVERAGE_FILE-root" \
+            "ISOLATTICE_TEST_PODMAN_ROOTFUL_CONNECTION=$ISOLATTICE_TEST_PODMAN_ROOTFUL_CONNECTION" \
+            "ISOLATTICE_TEST_PODMAN_ROOTFUL_IMAGE=$ISOLATTICE_TEST_PODMAN_ROOTFUL_IMAGE" \
+            uv run --no-sync pytest -p no:cacheprovider -m podman -k "$checkpoint_cases" \
+            $COVERAGE_ARGS --junitxml="$checkpoints"
+          sudo chown "$(id -u):$(id -g)" "$checkpoints" "$COVERAGE_FILE-root"
+          uv run --no-sync python scripts/check_live_skips.py "$checkpoints"
           for connection in "$ISOLATTICE_TEST_PODMAN_CONNECTION" "$ISOLATTICE_TEST_PODMAN_RESOURCE_CONNECTION"; do
             for kind in "ps -a" "pod ps" "volume ls" "image ls"; do
               remaining="$(podman --connection "$connection" $kind --filter label=io.isolattice.sandbox --quiet)"
@@ -381,7 +397,9 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-live-podman-${{ matrix.python-version }}
-          path: ${{ env.COVERAGE_FILE }}
+          path: |
+            ${{ env.COVERAGE_FILE }}
+            ${{ env.COVERAGE_FILE }}-root
           include-hidden-files: true
           if-no-files-found: error
 
@@ -574,7 +592,9 @@ jobs:
           $report = Join-Path $env:RUNNER_TEMP "isolattice-windows.xml"
           uv run --no-sync pytest tests/integration/test_windows_backend.py tests/integration/test_windows_appcontainer.py $env:COVERAGE_ARGS.Split(" ") --junitxml=$report
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          uv run --no-sync python scripts/check_live_skips.py $report
+          # When a host lets low-integrity code open the runner's processes (User Account
+          # Control disabled), the restricted option correctly reports itself unavailable.
+          uv run --no-sync python scripts/check_live_skips.py $report --allow-reason "User Account Control may be disabled"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $left = Get-ChildItem (Join-Path $env:LOCALAPPDATA "Packages") -Filter "isolattice.*" -ErrorAction SilentlyContinue
           if ($left) { Write-Error "AppContainer profiles remain: $($left.Name -join ', ')"; exit 1 }

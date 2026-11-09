@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import platform
 import subprocess
 import sys
 import time
@@ -137,7 +138,10 @@ def test_io_environment_and_working_directory(tmp_path: Path) -> None:
         data, cwd, names = json.loads(result.stdout)
         assert data == "input"
         assert Path(cwd) == tmp_path / "work"
-        assert {name.upper() for name in names} == {"GREETING", "SYSTEMROOT"}
+        # Windows on ARM adds PROCESSOR_ARCHITECTURE to every new process environment.
+        injected = {"PROCESSOR_ARCHITECTURE"} if platform.machine().upper() == "ARM64" else set()
+        assert {name.upper() for name in names} - injected == {"GREETING", "SYSTEMROOT"}
+        assert "ISOLATTICE_HOST_ONLY" not in names
         assert not result.stdout_truncated
         assert result.termination.resources_released
 
@@ -464,6 +468,8 @@ def test_windows_examples(directory: str, filename: str, expected: tuple[str, ..
     if b"cannot load inside an AppContainer" in completed.stderr:
         pytest.skip(completed.stderr.decode().strip())
     if b"a host privilege-management agent may have replaced it" in completed.stderr:
+        pytest.skip(completed.stderr.decode().strip())
+    if b"User Account Control may be disabled" in completed.stderr:
         pytest.skip(completed.stderr.decode().strip())
     assert completed.returncode == 0, completed
     assert completed.stderr == b"", completed.stderr

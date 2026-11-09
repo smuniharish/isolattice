@@ -228,7 +228,10 @@ def test_unsupported_instance_policies_fail_before_engine_access(
     asyncio.run(check())
 
 
-def test_rootful_report_gates_instance_limits_and_checkpoints() -> None:
+def test_rootful_report_gates_instance_limits_and_checkpoints(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(podman, "_client_refuses_checkpoints", lambda: False)
     rootful = podman._Engine(
         "podman",
         "c",
@@ -252,6 +255,36 @@ def test_rootful_report_gates_instance_limits_and_checkpoints() -> None:
     unavailable = podman._report(False, error="down")
     for capability in (Capability.WORKSPACE, Capability.SNAPSHOTS, Capability.DISK_LIMIT):
         assert unavailable.capabilities[capability].state is CapabilityState.UNSUPPORTED
+    monkeypatch.setattr(podman, "_client_refuses_checkpoints", lambda: True)
+    non_root = podman._report(True, engine=rootful).capabilities[Capability.CHECKPOINTS]
+    assert non_root.state is CapabilityState.UNSUPPORTED
+    assert "runs as root" in non_root.detail
+
+
+def test_client_checkpoint_rule_applies_only_to_non_root_linux(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(podman.sys, "platform", "win32")
+    assert not podman._client_refuses_checkpoints()
+    monkeypatch.setattr(podman.sys, "platform", "linux")
+    for euid, refused in ((0, False), (1000, True)):
+        monkeypatch.setattr(podman.os, "geteuid", lambda euid=euid: euid, raising=False)
+        assert podman._client_refuses_checkpoints() is refused
+
+
+def test_non_root_linux_client_rejects_checkpoint_policies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(podman, "_client_refuses_checkpoints", lambda: True)
+    backend = PodmanBackend(connection="not-contacted", image="not-contacted", allow_rootful=True)
+
+    async def check() -> None:
+        with pytest.raises(SandboxCapabilityError, match="runs as root"):
+            await backend.prepare(
+                SandboxPolicy(required_capabilities=(Capability.CHECKPOINTS,)), "0" * 32
+            )
+
+    asyncio.run(check())
 
 
 def test_budget_arguments_and_inspection_match() -> None:

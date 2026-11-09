@@ -1,6 +1,7 @@
 """Pytest configuration, Hypothesis profiles and live-engine fixtures."""
 
 import os
+import sys
 
 import pytest
 from hypothesis import HealthCheck, settings
@@ -58,6 +59,19 @@ def podman_resources_config() -> tuple[str, str, bool]:
 def podman_rootful_config() -> tuple[str, str]:
     """Explicit rootful engine for pod budgets and CRIU; only owned resources are touched."""
     return _connection("ISOLATTICE_TEST_PODMAN_ROOTFUL")
+
+
+def _checkpoint_connection() -> tuple[str, str]:
+    connection, image = _connection("ISOLATTICE_TEST_PODMAN_ROOTFUL")
+    if sys.platform == "linux" and os.geteuid() != 0:
+        pytest.skip("Podman's Linux client refuses checkpoint and restore unless run as root")
+    return connection, image
+
+
+@pytest.fixture
+def podman_checkpoint_config() -> tuple[str, str]:
+    """Rootful engine driven by a client Podman lets checkpoint (root on Linux)."""
+    return _checkpoint_connection()
 
 
 def _required(prefix: str, *names: str) -> tuple[str, ...]:
@@ -122,5 +136,8 @@ def example_config(request: pytest.FixtureRequest) -> tuple[str, str, bool]:
         return _resource_connection()
     if profile == "podman-rootful":
         connection, image = _connection("ISOLATTICE_TEST_PODMAN_ROOTFUL")
+        return connection, image, True
+    if profile == "podman-checkpoint":
+        connection, image = _checkpoint_connection()
         return connection, image, True
     pytest.fail(f"unknown example profile: {profile!r}")

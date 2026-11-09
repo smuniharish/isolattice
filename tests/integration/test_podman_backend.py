@@ -351,7 +351,7 @@ EXAMPLE_CASES = [
             "to 99",
             "Restored exit code: 0",
         ),
-        "podman-rootful",
+        "podman-checkpoint",
     ),
     (
         "06-async-and-cancellation",

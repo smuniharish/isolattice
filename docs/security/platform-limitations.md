@@ -23,7 +23,8 @@
   need the `memory`, `cpu` and `pids` cgroup v2 controllers delegated on the
   connection; without them, policies that set those limits fail closed.
 - Rootful needs `allow_rootful=True` and gives the engine host root. Instance budgets
-  (pod cgroups) and CRIU checkpoints work only on a rootful engine.
+  (pod cgroups) and CRIU checkpoints work only on a rootful engine. On Linux, Podman's
+  client also refuses checkpoint and restore unless the calling process is root.
 - `NETWORK_ISOLATION` is `LIMITED`, so requiring it fails closed.
 - The image environment is cleared: `PATH` is unset, so `argv[0]` must be absolute.
 - Workspace volumes and a writable container root have no disk quota.

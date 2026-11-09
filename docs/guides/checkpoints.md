@@ -26,6 +26,10 @@ For files only, use [snapshots](snapshots.md) instead; they work on more backend
 ## Prerequisites
 
 - A rootful Podman connection with CRIU installed and working on the engine host.
+- On Linux, the Isolattice process must run as root: Podman's Linux client refuses
+  `checkpoint` and `restore` from any other user, even against a rootful engine.
+  Without root, discovery reports `CHECKPOINTS` unsupported and policies that require
+  it fail closed. Windows and macOS clients have no such restriction.
 - `PodmanBackend(..., allow_rootful=True)`.
 - An artifact store: `Sandbox(artifact_store=...)`.
 - A policy that requires `Capability.CHECKPOINTS`. At `Sandbox.create()` the backend

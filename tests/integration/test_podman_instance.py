@@ -240,9 +240,9 @@ def test_rootful_pod_budget_is_shared_by_executions(
 
 
 def test_rootful_checkpoint_restores_into_new_instance(
-    podman_rootful_config: tuple[str, str], tmp_path: Path
+    podman_checkpoint_config: tuple[str, str], tmp_path: Path
 ) -> None:
-    connection, image = podman_rootful_config
+    connection, image = podman_checkpoint_config
     policy = SandboxPolicy(
         required_capabilities=(Capability.CHECKPOINTS,),
         execution_timeout=120,
@@ -302,9 +302,9 @@ def test_rootful_checkpoint_restores_into_new_instance(
 
 
 def test_restore_rejects_foreign_archive(
-    podman_rootful_config: tuple[str, str], tmp_path: Path
+    podman_checkpoint_config: tuple[str, str], tmp_path: Path
 ) -> None:
-    connection, image = podman_rootful_config
+    connection, image = podman_checkpoint_config
     archive = tmp_path / "foreign.tar.gz"
     executable = shutil.which("podman")
     assert executable is not None

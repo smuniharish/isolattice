@@ -195,7 +195,8 @@ A live run that silently skips proves nothing.
 [scripts/check_live_skips.py](https://github.com/smuniharish/isolattice/blob/main/scripts/check_live_skips.py)
 reads a JUnit report and fails when no test executed or when any test skipped
 that is not explicitly allowed with `--allow TEST_NAME` (parametrized IDs
-included):
+included) or `--allow-reason TEXT` (skips whose message contains `TEXT`, for a
+documented host limitation that affects several tests):
 
 ```powershell
 uv run pytest -m podman --junitxml=live.xml

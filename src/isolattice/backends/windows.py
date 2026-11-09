@@ -40,13 +40,17 @@ if TYPE_CHECKING:
 
 _MINIMUM_BUILD = 9200  # Windows 8 / Server 2012: nested Job Objects.
 _TERMINATED_EXIT_CODE = 1
-_LOW_INTEGRITY_RID = b"4096"
-# Reads the probe's own token integrity RID; ``whoami /groups`` fails at low integrity.
-_INTEGRITY_PROBE = """import ctypes
+_LOW_INTEGRITY_PROBE_OUTPUT = b"4096 denied"
+# Prints the probe's own integrity RID and whether it can open the caller (argv[1]) for
+# termination; ``whoami /groups`` fails at low integrity.
+_INTEGRITY_PROBE = """import ctypes, sys
 from ctypes import wintypes as w
 k = ctypes.WinDLL('kernel32', use_last_error=True)
 a = ctypes.WinDLL('advapi32', use_last_error=True)
 k.GetCurrentProcess.restype = w.HANDLE
+k.OpenProcess.restype = w.HANDLE
+k.OpenProcess.argtypes = (w.DWORD, w.BOOL, w.DWORD)
+k.CloseHandle.argtypes = (w.HANDLE,)
 a.OpenProcessToken.argtypes = (w.HANDLE, w.DWORD, ctypes.POINTER(w.HANDLE))
 a.GetTokenInformation.argtypes = (
     w.HANDLE, ctypes.c_int, ctypes.c_void_p, w.DWORD, ctypes.POINTER(w.DWORD)
@@ -64,7 +68,11 @@ if not (
 ):
     raise SystemExit(1)
 sid = ctypes.c_void_p.from_buffer(buffer).value
-print(a.GetSidSubAuthority(sid, a.GetSidSubAuthorityCount(sid)[0] - 1)[0])
+caller = k.OpenProcess(0x0001, False, int(sys.argv[1]))
+if caller:
+    k.CloseHandle(caller)
+rid = a.GetSidSubAuthority(sid, a.GetSidSubAuthorityCount(sid)[0] - 1)[0]
+print(rid, 'opened' if caller else 'denied')
 """
 _NO_GRACEFUL_STOP = (
     "Windows Job Objects provide no graceful stop; the job's process tree was terminated"
@@ -642,7 +650,14 @@ class WindowsJobBackend(Backend):
                 self._helper_interpreter,
                 {
                     "mode": "restricted",
-                    "argv": [str(self._helper_interpreter), "-I", "-S", "-c", _INTEGRITY_PROBE],
+                    "argv": [
+                        str(self._helper_interpreter),
+                        "-I",
+                        "-S",
+                        "-c",
+                        _INTEGRITY_PROBE,
+                        str(os.getpid()),
+                    ],
                     "cwd": str(self._root),
                     "environment": _environment({}),
                 },
@@ -652,12 +667,21 @@ class WindowsJobBackend(Backend):
             )
             try:
                 async with asyncio.timeout(self._startup_timeout):
-                    output, _ = await process.communicate()
+                    output, errors = await process.communicate()
             finally:
                 await _discard(process)
-            if process.returncode != 0 or output.strip() != _LOW_INTEGRITY_RID:
+            observed = output.strip()
+            if process.returncode != 0 or not observed.startswith(b"4096 "):
+                detail = (errors.strip().splitlines() or [b""])[-1][:200].decode(errors="replace")
                 raise SandboxCapabilityError(
-                    "the restricted-token probe did not run at low integrity"
+                    f"the restricted-token probe did not run at low integrity "
+                    f"(exit {process.returncode}, reported {observed[:40]!r}): {detail}"
+                )
+            if observed != _LOW_INTEGRITY_PROBE_OUTPUT:
+                raise SandboxCapabilityError(
+                    "a low-integrity workload can open the caller's process for termination "
+                    "on this host, so the restricted token protects no processes; "
+                    "User Account Control may be disabled"
                 )
         except (SandboxExecutionError, TimeoutError) as error:
             raise SandboxCapabilityError(

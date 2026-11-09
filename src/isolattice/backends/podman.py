@@ -365,6 +365,18 @@ def _require_supported(
             )
 
 
+_NON_ROOT_CLIENT = (
+    "Podman's Linux client refuses checkpoint and restore unless it runs as root, "
+    "even against a rootful engine"
+)
+
+
+def _client_refuses_checkpoints() -> bool:
+    if sys.platform == "linux":
+        return os.geteuid() != 0
+    return False
+
+
 def _checkpoint_evidence(available: bool, engine: _Engine | None) -> CapabilityEvidence:
     if not available or engine is None:
         return CapabilityEvidence(
@@ -374,6 +386,8 @@ def _checkpoint_evidence(available: bool, engine: _Engine | None) -> CapabilityE
         return CapabilityEvidence(
             CapabilityState.UNSUPPORTED, "CRIU checkpoints require a rootful Podman engine"
         )
+    if _client_refuses_checkpoints():
+        return CapabilityEvidence(CapabilityState.UNSUPPORTED, _NON_ROOT_CLIENT)
     return CapabilityEvidence(
         CapabilityState.LIMITED,
         "CRIU via podman checkpoint/restore; instances must require CHECKPOINTS, which "
@@ -542,6 +556,8 @@ class PodmanBackend(Backend):
                 "Podman checkpoints cannot be combined with workspaces, instance budgets "
                 "or a writable root"
             )
+        if checkpoints and _client_refuses_checkpoints():
+            raise SandboxCapabilityError(_NON_ROOT_CLIENT)
         resource_budgets = {
             Capability.MEMORY_LIMIT: limits.memory_bytes,
             Capability.CPU_LIMIT: limits.cpu_quota,
