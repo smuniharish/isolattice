@@ -40,17 +40,20 @@ def _rmtree_if_present(directory: Path) -> None:
 
 
 def _remove_tree(directory: Path) -> None:
+    # Retry transient failures a bounded number of times, then surface the failure.
     # On Windows, scanners and indexers briefly hold just-deleted files open, leaving
-    # them delete-pending so removing the parent directory fails; retry a bounded number
-    # of times, then surface the failure.
-    if sys.platform == "win32":
-        for delay in _REMOVE_RETRY_DELAYS:
-            try:
-                _rmtree_if_present(directory)
-            except PermissionError:
-                time.sleep(delay)
-            else:
-                return
+    # them delete-pending so removing the parent directory fails. On BSDs a concurrent
+    # removal of the same tree can report EAGAIN.
+    transient: tuple[type[OSError], ...] = (
+        (BlockingIOError, PermissionError) if sys.platform == "win32" else (BlockingIOError,)
+    )
+    for delay in _REMOVE_RETRY_DELAYS:
+        try:
+            _rmtree_if_present(directory)
+        except transient:
+            time.sleep(delay)
+        else:
+            return
     _rmtree_if_present(directory)
 
 

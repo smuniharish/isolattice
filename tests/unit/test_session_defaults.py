@@ -129,14 +129,14 @@ def test_staging_directory_is_removed_and_removal_is_idempotent(tmp_path: Path) 
     asyncio.run(check())
 
 
-def _flaky_rmtree(failures: int) -> tuple[list[int], Any]:
+def _flaky_rmtree(failures: int, error: type[OSError] = PermissionError) -> tuple[list[int], Any]:
     calls = [0]
     real = _artifacts.shutil.rmtree
 
     def rmtree(path: Path, **options: Any) -> None:
         calls[0] += 1
         if calls[0] <= failures:
-            raise PermissionError("delete pending")
+            raise error("delete pending")
         real(path, **options)
 
     return calls, rmtree
@@ -191,7 +191,7 @@ def test_windows_staging_removal_surfaces_persistent_failures(
     assert directory.exists()
 
 
-def test_staging_removal_does_not_retry_outside_windows(
+def test_staging_removal_does_not_retry_permission_errors_outside_windows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     directory = tmp_path / "staging"
@@ -202,3 +202,33 @@ def test_staging_removal_does_not_retry_outside_windows(
     with pytest.raises(PermissionError):
         asyncio.run(_artifacts.unstage(directory))
     assert calls == [1]
+
+
+@pytest.mark.parametrize("platform", ["openbsd7", "linux", "win32"])
+def test_staging_removal_retries_transient_eagain(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, platform: str
+) -> None:
+    directory = tmp_path / "staging"
+    directory.mkdir()
+    calls, rmtree = _flaky_rmtree(2, BlockingIOError)
+    monkeypatch.setattr(_artifacts.sys, "platform", platform)
+    monkeypatch.setattr(_artifacts.shutil, "rmtree", rmtree)
+    monkeypatch.setattr(_artifacts.time, "sleep", lambda _: None)
+    asyncio.run(_artifacts.unstage(directory))
+    assert calls == [3]
+    assert not directory.exists()
+
+
+def test_staging_removal_surfaces_persistent_eagain(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = tmp_path / "staging"
+    directory.mkdir()
+    calls, rmtree = _flaky_rmtree(100, BlockingIOError)
+    monkeypatch.setattr(_artifacts.sys, "platform", "openbsd7")
+    monkeypatch.setattr(_artifacts.shutil, "rmtree", rmtree)
+    monkeypatch.setattr(_artifacts.time, "sleep", lambda _: None)
+    with pytest.raises(BlockingIOError):
+        asyncio.run(_artifacts.unstage(directory))
+    assert calls == [len(_artifacts._REMOVE_RETRY_DELAYS) + 1]
+    assert directory.exists()
