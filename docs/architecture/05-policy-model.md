@@ -15,6 +15,7 @@ downgraded silently.
 | `memory_bytes`, `cpu_cores`, `process_limit` | `None` | Per-execution limits |
 | `instance_budget` | `None` | A `ResourceBudget` shared by all executions of the instance |
 | `scratch_bytes` | `None` | Size of the writable scratch area |
+| `scratch_inodes` | `None` | Inode cap for the scratch area; requires `scratch_bytes` |
 | `workspace` | `False` | Persistent workspace shared by executions; enables workspace snapshots |
 | `required_capabilities` | `()` | Capabilities that must be `SUPPORTED`, or the instance is not created |
 | `execution_timeout` | `30.0` | Default deadline per execution, overridable per request |
@@ -50,7 +51,8 @@ Invalid values raise `TypeError` or `ValueError` on construction: wrong types,
 non-positive or non-finite limits and timeouts, a `ResourceBudget` without any
 limit, or non-`Capability` entries. Requiring `INSTANCE_LIMITS`, `DISK_LIMIT`,
 `WORKSPACE` or `SNAPSHOTS` without the matching policy setting (`instance_budget`,
-`scratch_bytes`, `workspace`, or a workspace or writable root) is a `ValueError`.
+`scratch_bytes`, `workspace`, or a workspace or writable root) is a `ValueError`, as
+is `scratch_inodes` without `scratch_bytes`.
 Policies are immutable; a different policy needs a new instance.
 
 See the [policy reference](../reference/policies.md).

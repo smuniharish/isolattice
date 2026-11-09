@@ -81,7 +81,8 @@ A helper builds the boundary before the workload starts:
 Each execution has its own cgroup leaf below a per-instance parent. `memory_bytes`,
 `cpu_cores` and `process_limit` set `memory.max` (swap disabled), `cpu.max` and
 `pids.max`; `instance_budget` applies to the instance parent. `scratch_bytes` caps
-`/tmp`, charged to the memory cgroup. Termination writes `cgroup.kill` and waits for
+`/tmp`, charged to the memory cgroup, and `scratch_inodes` caps its inode count
+through the tmpfs `nr_inodes` option. Termination writes `cgroup.kill` and waits for
 `populated 0` before removing the leaf.
 
 `SandboxInstance.snapshot(key)` and `Sandbox.create(workspace_snapshot=key)` save and

@@ -76,6 +76,13 @@ asyncio.run(main())
 `/tmp` as a size-capped tmpfs whose pages count against the execution's memory
 limit. Kubernetes additionally requires a multiple of 4096 bytes.
 
+`scratch_inodes` caps the number of files and directories in that tmpfs (the
+tmpfs `nr_inodes` option, which also counts `/tmp` itself), so a workload cannot
+exhaust kernel memory with many empty files. It requires `scratch_bytes`. The Linux
+namespace backend and Docker Engine enforce it; Docker verifies the option on the
+inspected container before the workload starts. Podman (including its
+Docker-compatible API) and Kubernetes cannot apply it and reject the policy.
+
 ## A persistent workspace
 
 `workspace=True` creates one writable directory owned by the instance. Every

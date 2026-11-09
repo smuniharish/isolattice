@@ -46,8 +46,8 @@ categories:
     examples: examples/04-resource-management/README.md
     security: docs/security/threat-model.md
     planned_tests: [exact-budget-enforcement, descendant-accounting, cleanup-under-pressure]
-    implemented: [cpu, memory, scratch-disk-bytes, process-count, wall-time, aggregate-accounting]
-    tests: [tests/unit/test_podman_contract.py, tests/unit/test_properties.py, tests/unit/test_podman_instance_contract.py, tests/integration/test_podman_resources.py, tests/integration/test_podman_backend.py, tests/integration/test_podman_instance.py, tests/integration/test_windows_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_windows_appcontainer.py]
+    implemented: [cpu, memory, scratch-disk-bytes, disk-inodes, process-count, wall-time, aggregate-accounting]
+    tests: [tests/unit/test_podman_contract.py, tests/unit/test_properties.py, tests/unit/test_podman_instance_contract.py, tests/unit/test_runtime_artifacts.py, tests/unit/test_docker_contract.py, tests/unit/test_kubernetes_contract.py, tests/integration/test_podman_resources.py, tests/integration/test_podman_backend.py, tests/integration/test_podman_instance.py, tests/integration/test_windows_backend.py, tests/integration/test_linux_backend.py, tests/integration/test_docker_backend.py, tests/integration/test_windows_appcontainer.py]
     runnable_examples: [examples/04-resource-management/podman_limits.py, examples/04-resource-management/podman_instance_budget.py, examples/04-resource-management/windows_job_limits.py]
   - id: lifecycle
     category: 5

@@ -45,6 +45,7 @@ SandboxPolicy(
     process_limit=None,  # per execution
     instance_budget=None,  # ResourceBudget across the instance
     scratch_bytes=None,  # capped writable scratch
+    scratch_inodes=None,  # inode cap for the scratch (Linux, Docker Engine)
     workspace=False,  # persistent instance workspace
     required_capabilities=(),  # tuple[Capability, ...], fail closed
     execution_timeout=30.0,

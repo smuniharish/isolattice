@@ -261,6 +261,8 @@ Backend rules:
   in `detail`.
 - **Fail closed in `prepare()`.** Reject every policy field you do not enforce,
   including budgets, network modes and filesystem options. Never silently drop one.
+  For example, a backend that caps `scratch_bytes` but cannot cap inodes must still
+  reject `scratch_inodes`.
 - **State your threat model** in `limitations`: what the boundary shares with the
   host and which exploits are out of scope.
 - **Check required capabilities** against fresh evidence, not a cached report.

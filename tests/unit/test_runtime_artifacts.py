@@ -149,6 +149,11 @@ def test_policy_validates_new_budgets_and_required_settings() -> None:
         SandboxPolicy(instance_budget=object())  # pyrefly: ignore[bad-argument-type]
     with pytest.raises(ValueError, match="scratch_bytes must be positive"):
         SandboxPolicy(scratch_bytes=0)
+    with pytest.raises(ValueError, match="scratch_inodes must be positive"):
+        SandboxPolicy(scratch_bytes=1024, scratch_inodes=0)
+    with pytest.raises(ValueError, match="set scratch_bytes too"):
+        SandboxPolicy(scratch_inodes=64)
+    assert SandboxPolicy(scratch_bytes=1024, scratch_inodes=64).scratch_inodes == 64
     for capability in (
         Capability.INSTANCE_LIMITS,
         Capability.DISK_LIMIT,

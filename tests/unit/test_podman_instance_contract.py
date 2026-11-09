@@ -214,6 +214,10 @@ def test_budget_rejects_aggregate_process_limit() -> None:
             ),
             "6 MiB",
         ),
+        (
+            SandboxPolicy(scratch_bytes=1048576, scratch_inodes=16),
+            "inode count",
+        ),
     ],
 )
 def test_unsupported_instance_policies_fail_before_engine_access(

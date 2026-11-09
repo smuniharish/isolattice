@@ -121,6 +121,7 @@ the container before executing argv.
 - Memory is at least 6 MiB with swap disabled. CPU is a hard quota over 100 ms
   periods. `process_limit` counts processes and threads.
 - `scratch_bytes` mounts a size-capped `/tmp` tmpfs charged to the memory cgroup.
+  Podman's tmpfs options do not accept `nr_inodes`, so `scratch_inodes` is rejected.
 - `workspace=True` creates an owned named volume at `/workspace`, removed when the
   instance closes. Volumes have no quota.
 - `instance_budget` creates one owned pod per instance; its memory and CPU budgets are

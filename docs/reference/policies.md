@@ -19,6 +19,7 @@ Passed to `Sandbox.create(policy=...)`; `None` means `SandboxPolicy()`.
 | `process_limit` | `int` or `None` | `None` | Per-execution process (or task) limit |
 | `instance_budget` | `ResourceBudget` or `None` | `None` | One budget shared by all executions of the instance |
 | `scratch_bytes` | `int` or `None` | `None` | Size cap for the per-execution `/tmp` |
+| `scratch_inodes` | `int` or `None` | `None` | Inode (file and directory) cap for `/tmp`; needs `scratch_bytes` |
 | `workspace` | `bool` | `False` | Create a persistent per-instance workspace |
 | `required_capabilities` | `tuple[Capability, ...]` | `()` | Capabilities that must be SUPPORTED, or creation fails |
 | `execution_timeout` | `float` | `30.0` | Default seconds per execution; `ExecutionRequest.timeout` overrides it |
@@ -34,6 +35,7 @@ Validation at construction:
 - Requiring `INSTANCE_LIMITS`, `DISK_LIMIT` or `WORKSPACE` needs `instance_budget`,
   `scratch_bytes` or `workspace=True` respectively; requiring `SNAPSHOTS` needs
   `workspace=True` or `read_only_root=False`.
+- `scratch_inodes` requires `scratch_bytes`.
 
 Backend-specific acceptance is summarized in the
 [capability matrix](capabilities.md#backend-matrix) and the guides for

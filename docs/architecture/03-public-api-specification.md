@@ -79,7 +79,7 @@ ExecutionHandle
 SandboxPolicy(network=NetworkAccess.NONE,
               read_only_root=True, memory_bytes=None, cpu_cores=None,
               process_limit=None, instance_budget: ResourceBudget | None = None,
-              scratch_bytes=None, workspace=False,
+              scratch_bytes=None, scratch_inodes=None, workspace=False,
               required_capabilities: tuple[Capability, ...] = (),
               execution_timeout=30.0, max_concurrent_executions=4,
               output_queue_chunks=16, stdout_limit=1048576, stderr_limit=1048576,

@@ -40,6 +40,10 @@ pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="requires Linux"
 
 PYTHON = "/usr/bin/python3"
 ROOT = Path(__file__).resolve().parents[2]
+# Creates empty files in /tmp until the kernel refuses another inode.
+INODE_FILL = (
+    "i=0; while [ $i -lt 64 ] && touch /tmp/f$i 2>/dev/null; do i=$((i+1)); done; echo files=$i"
+)
 
 
 def policy(**overrides: Any) -> SandboxPolicy:
@@ -418,6 +422,25 @@ def test_scratch_space_is_capped(backend: LinuxNamespaceBackend) -> None:
             )
         assert b"No space left" in result.stdout, result.stdout
         assert result.stdout.strip().endswith(b"rc=1")
+
+    asyncio.run(check())
+
+
+def test_scratch_inode_count_is_capped(backend: LinuxNamespaceBackend) -> None:
+    async def check() -> None:
+        async with (
+            Sandbox(backend=backend) as sandbox,
+            await sandbox.create(
+                policy=policy(
+                    scratch_bytes=1 << 20,
+                    scratch_inodes=16,
+                    required_capabilities=(Capability.DISK_LIMIT,),
+                )
+            ) as instance,
+        ):
+            result = await instance.run(shell(INODE_FILL))
+        assert result.exit_code == 0, result.stderr
+        assert 0 < int(result.stdout.split(b"files=", 1)[1]) < 16, result.stdout
 
     asyncio.run(check())
 

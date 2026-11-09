@@ -204,6 +204,7 @@ def test_kubectl_always_receives_explicit_configuration() -> None:
         enabled(process_limit=16),
         enabled(memory_bytes=1024),
         enabled(scratch_bytes=1000),
+        enabled(scratch_bytes=4096, scratch_inodes=64),
         enabled(required_capabilities=(Capability.MEMORY_LIMIT,)),
     ],
 )

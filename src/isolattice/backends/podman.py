@@ -537,6 +537,8 @@ class PodmanBackend(Backend):
     async def prepare(self, policy: SandboxPolicy, sandbox_id: str) -> BackendSession:
         if policy.network is not NetworkAccess.NONE:
             raise SandboxCapabilityError("only disabled networking is implemented")
+        if policy.scratch_inodes is not None:
+            raise SandboxCapabilityError("Podman cannot cap the scratch tmpfs inode count")
         if not policy.read_only_root and Capability.DISK_LIMIT in policy.required_capabilities:
             raise SandboxCapabilityError(
                 "DISK_LIMIT cannot be required with a writable root: the container layer "

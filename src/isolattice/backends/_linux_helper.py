@@ -273,6 +273,9 @@ if sys.platform == "linux":
         os.makedirs(root + "/tmp")
         scratch = config["scratch_bytes"]
         size = f",size={scratch}" if scratch is not None else ""
+        inodes = config.get("scratch_inodes")
+        if inodes is not None:
+            size += f",nr_inodes={inodes}"
         _mount("tmpfs", root + "/tmp", "tmpfs", _MS_NOSUID | _MS_NODEV, f"mode=1777{size}")
         workspace = config["workspace"]
         if workspace is not None:

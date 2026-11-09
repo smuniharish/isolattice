@@ -144,6 +144,10 @@ class _Limits:
                 )
             millicpu = int(exact)
         scratch = policy.scratch_bytes
+        if policy.scratch_inodes is not None:
+            raise SandboxCapabilityError(
+                "Kubernetes emptyDir volumes cannot cap the number of inodes"
+            )
         if scratch is not None and (scratch % _PAGE or scratch >= 2**63):
             raise SandboxCapabilityError(
                 "Kubernetes scratch budget must be a multiple of 4096 bytes so the "

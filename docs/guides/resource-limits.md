@@ -90,6 +90,9 @@ policy is constructed. See the
 ## Disk and scratch space
 
 `scratch_bytes` caps `/tmp`; require `Capability.DISK_LIMIT` to make it mandatory.
+`scratch_inodes` additionally caps how many files and directories `/tmp` can hold;
+the Linux namespace backend and Docker Engine enforce it, while Podman, Docker API via
+Podman and Kubernetes reject it.
 Workspaces and Podman's writable container layer have no quota. See
 [filesystem isolation](filesystem-isolation.md).
 

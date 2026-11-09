@@ -13,11 +13,12 @@ decisions.
     so kernel, engine, runtime and cluster exploits are outside the threat model.
     The Windows Job Object backend is containment only, not a security boundary.
     No backend is certified for hostile multi-tenant workloads. Each backend is
-    selected explicitly by constructing it. Live tests ran on the maintainer's
-    machines (Podman 6.1.4 rootless and rootful, Docker Engine 29.9.3 in
-    `docker:dind`, kind, WSL2 Ubuntu 24.04 and Windows 11) and are evidence only
-    for those configurations. Hosted CI runs, independent security review and
-    adversarial testing are not done.
+    selected explicitly by constructing it. Live tests run on every push in
+    hosted CI and on the maintainer's machines (Podman 6.1.4 rootless and
+    rootful, Docker Engine, kind, WSL2 Ubuntu 24.04 and Windows 11); see
+    [tested platforms](../reference/tested-platforms.md). They are evidence only
+    for those configurations. Independent security review and adversarial
+    testing by a third party are not done.
 
 ## Implemented scope
 
@@ -101,8 +102,9 @@ New subsystems need architecture review before implementation.
 - **Artifacts.** Archives are extracted with validation, but snapshot capture is
   not atomic with respect to a running workload, and checkpoints contain process
   memory that may hold secrets.
-- **Docker API.** Live-tested against Docker Engine in `docker:dind` and through
-  Podman, not on a native Docker host.
+- **Docker API.** Live-tested against the hosted runner's Docker Engine, Docker
+  Engine in `docker:dind` and Podman's Docker-compatible API; Docker Desktop is
+  not tested.
 
 ## Open decisions
 
@@ -120,7 +122,8 @@ semantics, snapshot authenticity and checkpoint compatibility.
   Linux namespaces in WSL 2, Windows
   Job Object and AppContainer, and S3 storage against RustFS. Every runnable
   example is executed by its backend's live suite.
-- CI defines lint, type checking, tests and live jobs; hosted runs are not yet
-  verified.
+- Hosted CI runs lint, type checking, the core suite on Linux, Windows, macOS
+  and the BSDs, and every live backend job on each push; see
+  [tested platforms](../reference/tested-platforms.md).
 
 See [testing](testing.md) and [feature coverage](feature-coverage.md).

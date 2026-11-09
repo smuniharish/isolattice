@@ -387,16 +387,27 @@ class DockerBackend(Backend):
                 )
         if any(value is not None for value in budgets.values()) and not engine.cgroup_v2:
             raise SandboxCapabilityError("Docker resource limits require cgroup v2")
-        return _DockerSession(engine, limits, policy.scratch_bytes)
+        if policy.scratch_inodes is not None and engine.podman:
+            raise SandboxCapabilityError(
+                "Podman's Docker-compatible API cannot cap the scratch tmpfs inode count"
+            )
+        return _DockerSession(engine, limits, policy.scratch_bytes, policy.scratch_inodes)
 
 
 class _DockerSession(BackendSession):
     backend_name = "docker"
 
-    def __init__(self, engine: _Engine, limits: _Limits, scratch_bytes: int | None) -> None:
+    def __init__(
+        self,
+        engine: _Engine,
+        limits: _Limits,
+        scratch_bytes: int | None,
+        scratch_inodes: int | None = None,
+    ) -> None:
         self._engine = engine
         self._limits = limits
         self._scratch_bytes = scratch_bytes
+        self._scratch_inodes = scratch_inodes
 
     @override
     async def create_boundary(
@@ -447,8 +458,14 @@ class _DockerSession(BackendSession):
                 *self._limits.arguments(),
             ]
             if self._scratch_bytes is not None:
+                inodes = (
+                    f",nr_inodes={self._scratch_inodes}" if self._scratch_inodes is not None else ""
+                )
                 args.extend(
-                    ("--tmpfs", f"/tmp:rw,size={self._scratch_bytes},mode=1777,nosuid,nodev")
+                    (
+                        "--tmpfs",
+                        f"/tmp:rw,size={self._scratch_bytes}{inodes},mode=1777,nosuid,nodev",
+                    )
                 )
             if env_file is not None:
                 args.extend(("--env-file", str(env_file)))
@@ -672,12 +689,10 @@ class _DockerSession(BackendSession):
         mounts = mapping(tmpfs, _PRODUCT, "tmpfs mounts")
         options = mounts.get("/tmp")
         parts = set(options.split(",")) if isinstance(options, str) else set()
-        if set(mounts) != {"/tmp"} or not {
-            "rw",
-            f"size={self._scratch_bytes}",
-            "nosuid",
-            "nodev",
-        }.issubset(parts):
+        required = {"rw", f"size={self._scratch_bytes}", "nosuid", "nodev"}
+        if self._scratch_inodes is not None:
+            required.add(f"nr_inodes={self._scratch_inodes}")
+        if set(mounts) != {"/tmp"} or not required.issubset(parts):
             raise SandboxCapabilityError("Docker did not apply the size-capped scratch tmpfs")
 
     @override

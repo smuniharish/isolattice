@@ -183,6 +183,7 @@ class SandboxPolicy:
     process_limit: int | None = None
     instance_budget: ResourceBudget | None = None
     scratch_bytes: int | None = None
+    scratch_inodes: int | None = None
     workspace: bool = False
     required_capabilities: tuple[Capability, ...] = ()
     execution_timeout: float = 30.0
@@ -209,6 +210,10 @@ class SandboxPolicy:
             raise TypeError("instance_budget must be a ResourceBudget")
         if self.scratch_bytes is not None:
             _positive_integer(self.scratch_bytes, "scratch_bytes")
+        if self.scratch_inodes is not None:
+            _positive_integer(self.scratch_inodes, "scratch_inodes")
+            if self.scratch_bytes is None:
+                raise ValueError("scratch_inodes caps the scratch space; set scratch_bytes too")
         if type(self.workspace) is not bool:
             raise TypeError("workspace must be a bool")
         if not all(isinstance(item, Capability) for item in self.required_capabilities):

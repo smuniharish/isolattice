@@ -86,6 +86,7 @@ starts. Any mismatch deletes the Pod and fails.
 | `memory_bytes`, `cpu_cores` | Container limits; CPU in whole millicores, at least `10m` |
 | `process_limit` | Rejected |
 | `scratch_bytes` | Memory-backed `emptyDir` at `/tmp`; a multiple of 4096 |
+| `scratch_inodes` | Rejected: `emptyDir` cannot cap inodes |
 | `workspace`, `instance_budget` | Rejected |
 | Snapshots and checkpoints | Rejected |
 

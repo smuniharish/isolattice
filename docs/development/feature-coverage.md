@@ -33,7 +33,7 @@ hostile multi-tenant code.
 | 1 | Getting started | first sandbox, shell command, async ownership | `podman_hello.py` |
 | 2 | Execution | argv, cwd, explicit environment, stdin, stdout/stderr streaming, backpressure, capture limits, exit codes, execution events, concurrent execution | `podman_hello.py`, `podman_io.py`, `podman_stream_cancel.py`, `podman_event_sink.py` |
 | 3 | Security | isolated root, read-only and writable paths, path restrictions, no network, environment isolation, process visibility, privileges | `podman_hello.py`, `linux_namespaces.py`, `windows_appcontainer.py` |
-| 4 | Resources | CPU, memory, scratch disk bytes, process count, wall time, aggregate (instance) accounting | `podman_limits.py`, `podman_instance_budget.py`, `windows_job_limits.py` |
+| 4 | Resources | CPU, memory, scratch disk bytes and inodes, process count, wall time, aggregate (instance) accounting | `podman_limits.py`, `podman_instance_budget.py`, `windows_job_limits.py` |
 | 5 | Lifecycle | stop/kill/close, grace/force, children and grandchildren, orphan prevention, boundary generation, ownership, stable termination | `podman_stream_cancel.py`, `windows_job_limits.py` |
 | 6 | Async | async-only, concurrent sandboxes, cancellation (cooperative startup, repeated), timeout, bounded cleanup, failure cleanup, error groups | `podman_stream_cancel.py` |
 | 7 | Capabilities | discovery, supported/limited/unsupported, explicit selection, backend failure | `podman_capabilities.py`, `windows_job_capabilities.py` |
@@ -76,6 +76,5 @@ Also proposed, inside otherwise partial or ledger-proposed categories:
 
 ## Not implemented inside partial categories
 
-- Disk inode limits (category 4). Only scratch-space byte limits exist.
 - Snapshot signing and authenticity (category 12). Snapshots carry SHA-256
   integrity manifests that are verified on every read, but they are not signed.

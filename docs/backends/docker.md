@@ -65,12 +65,14 @@ asyncio.run(main())
 Each container runs with a read-only root, `--network none`, UID 65534, every
 capability dropped, `no-new-privileges`, the engine's default seccomp filter, a
 size-capped `/tmp` tmpfs and the requested cgroup limits. After creation the container
-is inspected and must match the plan. A shell prelude then reads capabilities,
+is inspected and must match the plan, including `nr_inodes` when `scratch_inodes` is
+set. A shell prelude then reads capabilities,
 `NoNewPrivs`, seccomp mode, UID, cgroup limits and the `/tmp` size from inside the
 container before executing argv. Any mismatch fails closed and removes the container.
 
 `prepare` rejects `network` other than `NONE`, `read_only_root=False`,
-`workspace=True` and `instance_budget`.
+`workspace=True` and `instance_budget`, and rejects `scratch_inodes` when the endpoint
+is Podman's Docker-compatible API, which cannot apply `nr_inodes`.
 
 ## Capabilities
 

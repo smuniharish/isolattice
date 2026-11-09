@@ -151,6 +151,25 @@ def test_required_limited_capabilities_fail_closed(
         asyncio.run(DockerBackend(host="h", image="i").prepare(policy, SANDBOX))
 
 
+@pytest.mark.parametrize("podman", [True, False])
+def test_inode_caps_are_rejected_on_podmans_docker_api(
+    podman: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def probe(self: DockerBackend) -> docker._Engine:
+        return engine(podman=podman)
+
+    monkeypatch.setattr(DockerBackend, "_probe", probe)
+    policy = SandboxPolicy(scratch_bytes=1024 * 1024, scratch_inodes=16)
+    prepare = DockerBackend(host="h", image="i").prepare(policy, SANDBOX)
+    if podman:
+        with pytest.raises(SandboxCapabilityError, match="inode count"):
+            asyncio.run(prepare)
+    else:
+        session = asyncio.run(prepare)
+        assert isinstance(session, docker._DockerSession)
+        assert session._scratch_inodes == 16
+
+
 def test_kernel_prelude_checks_every_isolation_signal() -> None:
     script = _bootstrap.KernelChecks(
         uid=65534, gid=65534, memory_bytes=2**26, cpu_quota=25000, process_limit=8
@@ -304,6 +323,41 @@ def test_inspection_rejects_any_weakened_container(
     tamper(current)
     with pytest.raises(SandboxCapabilityError):
         asyncio.run(session._validate(boundary, request))
+
+
+@pytest.mark.parametrize(
+    ("options", "accepted"),
+    [
+        ("rw,size=1048576,nr_inodes=64,mode=1777,nosuid,nodev", True),
+        ("rw,size=1048576,mode=1777,nosuid,nodev", False),
+        ("rw,size=1048576,nr_inodes=65,mode=1777,nosuid,nodev", False),
+    ],
+)
+def test_scratch_inode_cap_is_requested_and_inspected(
+    options: str, accepted: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session = docker._DockerSession(
+        engine(podman=False), docker._Limits(memory_bytes=2**26), 1024 * 1024, scratch_inodes=64
+    )
+    request = ExecutionRequest(argv=("/bin/echo", "hi"), environment={"GREETING": "hi"}, cwd="/w")
+    data = valid_inspection(session, request)
+    config = data["Config"]
+    assert isinstance(config, dict)
+    config["Env"] = ["PATH=/usr/bin:/bin", "GREETING=hi"]
+    host = data["HostConfig"]
+    assert isinstance(host, dict)
+    host["Tmpfs"] = {"/tmp": options}
+    boundary = Boundary("d" * 64, f"isolattice-{SANDBOX}-{EXECUTION}", SANDBOX, EXECUTION)
+
+    async def inspect(self: docker._DockerSession, target: Boundary) -> dict[str, object]:
+        return data
+
+    monkeypatch.setattr(docker._DockerSession, "_inspect", inspect)
+    if accepted:
+        asyncio.run(session._validate(boundary, request))
+    else:
+        with pytest.raises(SandboxCapabilityError, match="scratch tmpfs"):
+            asyncio.run(session._validate(boundary, request))
 
 
 def test_docker_engine_does_not_get_the_podman_environment_allowance(

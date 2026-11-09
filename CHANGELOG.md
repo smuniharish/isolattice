@@ -22,7 +22,6 @@
   inherited output pipes cannot stall completion.
 - Eight CLI examples (six Podman, two Windows) with exhaustive live coverage and
   bounded live OOM, task-denial, CPU-throttling and cgroup-write-denial tests.
-- Provisioned Linux live-test CI configuration; hosted execution is not yet verified.
 - Instance budgets (`SandboxConfig` aggregate CPU, memory and process limits),
   capped scratch space, persistent workspaces and validated workspace snapshot
   archives with SHA-256 manifests and safe extraction.
@@ -49,8 +48,13 @@
 - Podman container root snapshots: pause-consistent export of a running
   execution's writable root, verified import into a new instance and removal
   of the imported image on close.
-- CI jobs for Windows native backends, a kind cluster, the Docker API and
-  rootful Podman (not yet verified on hosted runners).
+- `SandboxPolicy.scratch_inodes` caps the scratch tmpfs inode count on the Linux
+  namespace backend and Docker Engine; Podman, Docker API via Podman and
+  Kubernetes reject it.
+- Hosted CI runs the core suite on Ubuntu, Windows and macOS (x64 and arm64,
+  Python 3.12 to 3.15), ten Linux distributions and three BSDs, plus live jobs
+  for Podman (rootless, rootful, CRIU, SSH), Docker Engine, kind, Linux
+  namespaces and Windows Job Object and AppContainer.
 - Every backend is selected by constructing it and passing it to
   `Sandbox(backend=...)`. Containers, Pods, namespaces and AppContainers share
   the host or node kernel, so kernel, engine, runtime or cluster exploits are

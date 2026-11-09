@@ -23,6 +23,10 @@ from isolattice import (
 from isolattice.backends import _bootstrap, docker
 
 pytestmark = pytest.mark.docker
+# Creates empty files in /tmp until the kernel refuses another inode.
+INODE_FILL = (
+    "i=0; while [ $i -lt 64 ] && touch /tmp/f$i 2>/dev/null; do i=$((i+1)); done; echo files=$i"
+)
 
 DockerConfig = tuple[str, str, str | None, bool]
 
@@ -195,6 +199,36 @@ def test_real_kernel_limits_and_scratch_are_enforced(docker_config: DockerConfig
         assert rejected > 0, output
         assert result.termination.state == "terminated"
         assert result.termination.resources_released
+
+    asyncio.run(check())
+
+
+def test_scratch_inode_count_is_capped(docker_config: DockerConfig) -> None:
+    async def check() -> None:
+        policy = SandboxPolicy(
+            scratch_bytes=1024 * 1024,
+            scratch_inodes=16,
+            required_capabilities=(Capability.DISK_LIMIT,),
+            execution_timeout=120,
+            termination=fast_termination(),
+        )
+        configured = backend_for(docker_config)
+        before = await labelled_containers(docker_config)
+        if (await configured._probe()).podman:
+            async with Sandbox(backend=configured) as sandbox:
+                with pytest.raises(SandboxCapabilityError, match="inode count"):
+                    await sandbox.create(policy=policy)
+            assert await labelled_containers(docker_config) == before
+            return
+        async with (
+            Sandbox(backend=configured) as sandbox,
+            await sandbox.create(policy=policy) as instance,
+        ):
+            result = await instance.run(ExecutionRequest(argv=("/bin/sh", "-c", INODE_FILL)))
+        assert result.exit_code == 0, result.stderr
+        assert 0 < int(result.stdout.decode().split("files=", 1)[1]) < 16, result.stdout
+        assert result.termination.resources_released
+        assert await labelled_containers(docker_config) == before
 
     asyncio.run(check())
 

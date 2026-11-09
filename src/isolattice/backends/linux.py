@@ -537,6 +537,7 @@ class LinuxNamespaceBackend(Backend):
             state_directory=self._state_directory,
             limits=limits,
             scratch_bytes=policy.scratch_bytes,
+            scratch_inodes=policy.scratch_inodes,
             landlock_abi=host.landlock_abi,
             startup_timeout=self._startup_timeout,
             helper_interpreter=self._helper_interpreter,
@@ -600,12 +601,14 @@ class _LinuxSession(BackendSession):
         landlock_abi: int,
         startup_timeout: float,
         helper_interpreter: str,
+        scratch_inodes: int | None = None,
     ) -> None:
         self._cgroup_root = cgroup_root
         self._read_only_paths = read_only_paths
         self._state_parent = state_directory
         self._limits = limits
         self._scratch_bytes = scratch_bytes
+        self._scratch_inodes = scratch_inodes
         self._landlock_abi = landlock_abi
         self._startup_timeout = startup_timeout
         self._helper_interpreter = helper_interpreter
@@ -693,6 +696,7 @@ class _LinuxSession(BackendSession):
             "root": str(self._state / "root"),
             "read_only_paths": list(self._read_only_paths),
             "scratch_bytes": self._scratch_bytes,
+            "scratch_inodes": self._scratch_inodes,
             "workspace": None if self._workspace is None else str(self._workspace),
             "cwd": request.cwd,
             "argv": list(request.argv),
