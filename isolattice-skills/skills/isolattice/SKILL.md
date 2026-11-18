@@ -17,7 +17,7 @@ compatibility: >-
   pip install "isolattice[s3]" for S3 storage). Running workloads needs one
   prepared backend host; the bundled script and template run offline.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   documentation: "https://isolattice.readthedocs.io/en/latest/"
 ---
 

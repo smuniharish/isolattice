@@ -24,16 +24,12 @@ leases or orphan reconciliation beyond what the engine or cluster provides.
 A remote backend would need an architecture review and approval before
 implementation. At minimum it must provide:
 
-- Mutual authentication, authorization per tenant and secret-free logs and events.
-- Idempotency keys for create and execute, and an operation lookup that answers
-  accepted, completed or unknown after a lost response.
-- Leases with explicit expiry, and server-side reconciliation of orphaned boundaries.
-- Bounded streaming with backpressure and explicit truncation.
-- Termination reports with the same `terminated`, `non_empty` and `unknown` meanings;
-  network loss is `unknown`, never success.
+- Explicit endpoint trust, authorization and safe handling of workload data.
+- Clear ownership, bounded output and a way to resolve uncertain outcomes without
+  assuming a disconnected workload has stopped.
 - Capability evidence for the remote host, not the client.
 
-![Proposed idempotent remote operation lookup](../assets/diagrams/remote-execution-proposal.png)
+![Proposed remote boundary; lost contact is not proof of termination](../assets/diagrams/remote-execution-proposal.png)
 
 See the [remote backend page](../backends/remote.md) and the
 [remote execution guide](../guides/remote-execution.md).

@@ -14,7 +14,7 @@ body:
     attributes:
       label: Isolattice version
       description: Output of `python -c "import importlib.metadata as m; print(m.version('isolattice'))"`.
-      placeholder: "0.1.0"
+      placeholder: "0.1.1"
     validations:
       required: true
 

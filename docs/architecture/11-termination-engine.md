@@ -7,7 +7,7 @@ stops a boundary, verifies it is empty and releases its resources. Backends impl
 a `TerminationDriver` for their boundary identity and call it from
 `BackendSession.terminate()`.
 
-![Verified termination: observe, signal, confirm, release, retry](../assets/diagrams/termination-engine.png)
+![Cleanup verifies boundary termination and release before reporting success](../assets/diagrams/termination-engine.png)
 
 ## Driver contract
 
@@ -30,21 +30,10 @@ driver is recorded as a note and treated as `UNKNOWN`; it never counts as succes
 
 ## Algorithm
 
-Each attempt, within `total_timeout` overall:
-
-1. Observe the boundary.
-2. If it is `RUNNING`, send a graceful signal unless force was requested, and wait up
-   to `graceful_timeout`; a force request during the wait ends it early. If it is still
-   running, send a forced signal and wait up to `force_timeout`.
-3. If it is `EXITED` or `CREATED`, wait `verification_interval` and observe again. Only
-   the same state twice counts as quiescent. An `ABSENT` boundary counts only after a
-   removal or a releasing signal was acknowledged.
-4. Call `remove()`, then `exists()`. The boundary counts as released only when `exists()`
-   reports it gone.
-5. Otherwise wait `retry_delay` and start the next attempt.
-
-A `CREATED` boundary with `start_requested` is removed directly, which prevents a
-delayed start. If every attempt fails, or `total_timeout` expires,
+The helper can escalate a graceful stop to a forced stop and retry within the
+configured limits. It uses evidence about the boundary, not the exit of the
+initial process. A driver must not report a boundary as released while a pending
+start might still launch a workload. If cleanup cannot be verified,
 `TerminationVerificationError` carries a report with state `non_empty` (last seen
 running) or `unknown`.
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Isolattice is a Python 3.12+ library (Apache-2.0, version 0.1.0) that gives async
+Isolattice is an Apache-2.0 library for Python 3.12+ that gives async
 applications one explicit interface to create an execution boundary, run workloads
 inside it, stream bounded output, and verify that the boundary is empty and released
 afterwards. The common API does not imply equal protection: each backend enforces

@@ -40,14 +40,24 @@ Dependency groups in `pyproject.toml` (locked in `uv.lock`):
 
 | Group | Tools |
 | --- | --- |
-| `test` | pytest 9.2.0, Hypothesis 6.170.15, coverage 7.17.2, pytest-cov 7.1.0, PyYAML 6.0.3, skills-ref 0.1.1 |
-| `lint` | Ruff 0.17.4 for linting and formatting |
-| `types` | Pyrefly 1.4.1 for static type checking, with `types-pyyaml` |
-| `docs` | Zensical 0.1.0 and mkdocstrings-python 2.0.10 for the documentation site and API reference |
+| `test` | pytest, Hypothesis, coverage, pytest-cov, Markdown, PyYAML and skills-ref |
+| `lint` | Ruff for linting and formatting |
+| `types` | Pyrefly for static type checking, with `types-markdown` and `types-pyyaml` |
+| `docs` | Zensical and mkdocstrings-python for the documentation site and API reference |
 
 `dev` combines `test`, `lint` and `types` and is the default group. Markdown linting
 uses `markdownlint-cli2` and diagrams are rendered with `@mermaid-js/mermaid-cli`;
 both are Node.js tools installed globally, not project dependencies.
+
+## Compatibility notes
+
+The declared support floor remains Python 3.12. See `pyproject.toml` for direct
+requirements and `uv.lock` for the resolved versions. The 2026-11-18
+[PyPI](https://pypi.org/) review kept botocore 1.43.117 and python-dateutil
+2.9.0.post0: newer stable releases do not satisfy the requirements of
+[aiobotocore 3.10.0](https://pypi.org/project/aiobotocore/3.10.0/).
+Keep these indirect dependencies under the SDK's constraints rather than
+overriding them to force upgrades.
 
 ## Review triggers
 

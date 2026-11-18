@@ -69,6 +69,21 @@ to regenerate the PNG files, then `--check` to confirm they are current.
 [Testing](testing.md) describes the skill suite, the live backend suites, their
 environment variables and the coverage gate.
 
+## Public architecture documentation
+
+- **Public contracts:** Explain what the package does, how to configure and
+  extend it, what evidence it reports, and where guarantees stop. Include
+  prerequisites, failure behavior, trust boundaries and known limitations.
+- **Internal design:** Summarize orchestration, state and implementation
+  choices unless the detail is needed to integrate, operate or review the
+  package. Keep Mermaid sources and published images at the same level.
+- **Potentially confidential design:** Refer novel techniques, unreleased
+  blueprints and sensitive findings to the maintainer for private review.
+  Do not put that material in public issues, diagram sources or assets.
+
+Removing information from the site does not remove it from published source,
+distributions or Git history. Do not treat omission as a security control.
+
 ## Coding rules
 
 - Target Python 3.12+ with complete type annotations. pyrefly must pass for the

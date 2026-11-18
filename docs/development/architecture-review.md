@@ -2,7 +2,7 @@
 
 This is the current assessment of what Isolattice implements, what it does not,
 and the risks that remain. The numbered [architecture documents](../architecture/01-project-overview.md)
-hold the full design; the
+describe the public architecture and contributor contracts; the
 [decision records](../architecture/22-architecture-decision-records.md) hold the
 decisions.
 

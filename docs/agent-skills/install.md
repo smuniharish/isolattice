@@ -100,7 +100,7 @@ the skills, so you can leave them out.
 
     ```text
     PASS  Python 3.14.10 (3.12 or newer required)
-    PASS  isolattice 0.1.0 (0.1 expected by this skill)
+    PASS  isolattice 0.1.1 (0.1 expected by this skill)
     INFO  aiobotocore 3.10.0 (>=3.10.0,<4 for the s3 extra)
     INFO  engine clients on PATH: podman, kubectl; platform win32
     PASS  policies default to no network and a read-only root, and fail closed
@@ -129,3 +129,47 @@ the skills, so you can leave them out.
 Run `npx skills update`, or replace the installed folders with the latest
 directories from the repository, then restart or reload your agent. Each
 skill's `metadata.version` matches the Isolattice release it describes.
+
+## Optional upstream skills
+
+Installing a Python package or an Isolattice extra does not install an agent
+skill. Review the upstream source and your agent's permissions before installing
+third-party instructions.
+
+### Amazon S3
+
+For applications using `isolattice[s3]` with Amazon S3, AWS's
+[Agent Toolkit skill catalog](https://github.com/aws/agent-toolkit-for-aws/tree/main/skills)
+offers `aws-storage`, `securing-s3-buckets`, and `troubleshooting-s3-files`.
+With the same Node.js and agent prerequisites as the skills CLI above, select
+a skill explicitly, for example:
+
+```bash
+npx skills add aws/agent-toolkit-for-aws/skills --skill securing-s3-buckets
+```
+
+Ask your agent to review an S3 bucket policy or help diagnose object access.
+The skills do not configure Isolattice, supply credentials, or establish that a
+third-party S3-compatible service supports the same AWS features. Configure the
+store separately using the [storage API](../api/storage.md). Use read-only
+or appropriately scoped access when investigating a live account.
+
+[aiobotocore-bot](https://github.com/aio-libs/aiobotocore/tree/main/plugins/aiobotocore-bot)
+is a separate Claude Code plugin for **contributing to aiobotocore**, not for
+using Isolattice's S3 store. Its upstream instructions describe `review-pr`,
+`port-tests`, `check-override-drift`, and related maintenance skills.
+
+### Contributor tools
+
+- The [Skills CLI](https://github.com/vercel-labs/skills) offers `find-skills`.
+  Install it with `npx skills add vercel-labs/skills --skill find-skills` to
+  help discover other skills; `skills-ref` is a format validator, not a catalog.
+- Pyrefly's
+  [add-shape-types-to-torch-model](https://github.com/facebook/pyrefly/tree/main/tensor-shapes/skills/add-shape-types-to-torch-model)
+  is for PyTorch projects using Pyrefly's tensor shape annotations. Copy the
+  complete directory into your agent's skills location as above. It is not
+  needed for Isolattice's type checks.
+- uv, Ruff and Hypothesis have repository-contributor skills; these are not
+  part of Isolattice or those Python distributions. No installable end-user
+  skill was verified for the other declared Python tools or for the
+  `podman`, `docker`, and `kubectl` clients reviewed.

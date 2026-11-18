@@ -274,7 +274,7 @@ class RepositoryValidator:
             "docs/development/architecture-review.md",
             "scripts/check_site_links.py",
             ".github/workflows/ci.yml",
-            ".github/workflows/release.yml",
+            ".github/workflows/external-links.yml",
         ):
             self.require(name)
         for name in ("package.json", "package-lock.json", "node_modules", "mkdocs.yml"):

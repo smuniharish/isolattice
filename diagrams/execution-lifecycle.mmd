@@ -1,9 +1,6 @@
 flowchart LR
-    Start["start()"] --> Allocate["create_boundary<br/>registered"]
-    Allocate --> Launch["start_boundary"]
-    Launch --> Stream["Stream and<br/>capture output"]
-    Stream --> Exit["workload_exited<br/>exit_code"]
-    Exit --> Cleanup["terminate<br/>verified release"]
-    Cleanup --> Result["ExecutionResult"]
+    Start["start() or run()"] --> Stream["Owned execution<br/>with bounded output"]
+    Stream -->|completion or failure| Cleanup["Verify termination<br/>and release"]
+    Cleanup -->|verified| Outcome["Result or<br/>execution error"]
     Stream -.->|timeout, cancel, stop| Cleanup
-    Cleanup -.->|deadline expired| Late["TerminationVerificationError<br/>late cleanup stays owned"]
+    Cleanup -.->|not verified| Failure["TerminationVerificationError"]

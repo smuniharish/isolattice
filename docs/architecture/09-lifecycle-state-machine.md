@@ -17,11 +17,10 @@ Operations on an owner that is not in the required state raise `SandboxStateErro
 - `Sandbox.create()` returns an instance only after `prepare()` and any snapshot
   imports succeeded. Otherwise the session is closed and the instance never exists.
 - In `ready`, the instance admits `start()`, `run()`, `snapshot()` and `restore()`.
-  Admission and snapshots share a per-instance lock. `start()` raises
+  `start()` raises
   `SandboxStateError` when `max_concurrent_executions` executions are active.
-- `stop()`, `kill()` and `close()` start one owned stop task, shared by concurrent and
-  repeated callers. It terminates every active execution, then closes the session.
-  `kill()` also sets the force flag of each execution, skipping the graceful phase.
+- `stop()`, `kill()` and `close()` coordinate shutdown of all active executions.
+  `kill()` requests forced termination rather than a graceful stop.
 - The instance becomes `closed` when every boundary was verified and released and
   the session closed. Otherwise it becomes `failed` and the caller receives a
   `BaseExceptionGroup` of every cleanup failure; a `SANDBOX_CLEANUP_FAILED` event is
@@ -34,13 +33,10 @@ Operations on an owner that is not in the required state raise `SandboxStateErro
 
 ![Execution from boundary creation to verified release](../assets/diagrams/execution-lifecycle.png)
 
-1. `create_boundary` allocates and registers the boundary before any start.
-2. `start_boundary` starts the workload and its attached client process.
-3. Both output streams are drained concurrently in 64 KiB reads into bounded captures,
-   or into the `output()` queue with backpressure.
-4. `workload_exited` and `exit_code` determine the authoritative exit code.
-5. `terminate` verifies an empty boundary and releases it. This runs on success,
-   failure, timeout, cancellation and stop.
+An execution runs in its own boundary and can stream bounded output through
+`output()`. Completion, failure, timeout, cancellation and stop all require
+cleanup. The result reports the workload exit code and verified termination;
+cleanup that cannot be verified is reported as an error.
 
 The deadline is `request.timeout`, or `policy.execution_timeout` when unset. On expiry
 the boundary is terminated and `SandboxTimeoutError` carries the report.

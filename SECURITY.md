@@ -2,7 +2,7 @@
 
 ## Current status
 
-Isolattice 0.1.0 ships Podman, Docker, Kubernetes, Linux namespace, Windows
+The Isolattice 0.1 series ships Podman, Docker, Kubernetes, Linux namespace, Windows
 AppContainer and Windows Job Object backends. Containers, Pods, namespaces and
 AppContainers share the host (or node) kernel, so kernel, engine, runtime or
 cluster exploits are outside the threat model, and the engine, cluster, image

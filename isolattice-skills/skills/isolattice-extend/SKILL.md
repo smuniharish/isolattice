@@ -16,7 +16,7 @@ compatibility: >-
   Python 3.12 or newer with isolattice 0.1 installed. The bundled script and
   templates run offline with pytest; a custom Backend needs its own host.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   documentation: "https://isolattice.readthedocs.io/en/latest/"
 ---
 

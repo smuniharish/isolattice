@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1
+
+- Simplified public architecture diagrams and lifecycle explanations while
+  retaining integration contracts and security limitations.
+- Documented upstream Agent Skills separately from Python extras.
+- Updated compatible build, documentation and development dependencies.
+- Removed automated PyPI publishing and documented manual release preparation.
+
 ## 0.1.0
 
 - Architecture and repository foundation for Isolattice.
