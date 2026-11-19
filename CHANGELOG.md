@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added live PyPI download badges to the README and documentation home page.
+
 ## 0.1.1
 
 - Simplified public architecture diagrams and lifecycle explanations while
